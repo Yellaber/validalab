@@ -4,9 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado actual del repositorio
 
-**El proyecto aún no tiene código.** El directorio de trabajo (`validalab/`) está vacío y todavía no es un repositorio Git propio (un `git status` aquí asciende hasta `C:/`). Antes de escribir código, inicializa el repo con `git init` en esta carpeta.
+**El monorepo ya está inicializado** como repositorio Git propio en `validalab/`, con dos paquetes andamiados pero aún sin código de dominio:
 
-La única fuente de verdad existente es la especificación de requerimientos (SRS), en la carpeta hermana:
+- `frontend/` — scaffold de Angular 22 (standalone, detección de cambios *zoneless*). Ver `frontend/CLAUDE.md` para comandos y arquitectura del frontend.
+- `backend/` — scaffold de NestJS 11 (aún el `AppController`/`AppService` por defecto).
+
+Ambos paquetes, y la raíz, usan **OpenSpec** (desarrollo guiado por especificación): hay `openspec/` con `config.yaml`, `specs/` y `changes/`. Las funcionalidades sustanciales pasan por el ciclo propose → apply → verify → archive (skills `opsx:*` / `openspec-*`).
+
+La fuente de verdad funcional sigue siendo la especificación de requerimientos (SRS), en la carpeta hermana:
 
 ```
 ../Especificacion de requerimientos de software/SRS_ValidaLab_v6.0.docx   ← versión vigente
