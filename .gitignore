@@ -1,0 +1,92 @@
+# ==============================================================================
+# .gitignore del monorepo ValidaLab (frontend Angular + backend NestJS)
+# Las reglas sin "/" inicial aplican en cualquier nivel, por lo que cubren
+# tanto /frontend como /backend.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Dependencias
+# ------------------------------------------------------------------------------
+node_modules/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# ------------------------------------------------------------------------------
+# Salidas de compilación / build
+# ------------------------------------------------------------------------------
+dist/
+tmp/
+out-tsc/
+build/
+bazel-out/
+/.angular/cache
+*.tsbuildinfo
+
+# ------------------------------------------------------------------------------
+# Variables de entorno y secretos (BYOK, API keys, credenciales DB)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ------------------------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# Pruebas y cobertura
+# ------------------------------------------------------------------------------
+coverage/
+*.lcov
+.nyc_output/
+testem.log
+/typings
+
+# ------------------------------------------------------------------------------
+# Caché de herramientas
+# ------------------------------------------------------------------------------
+.cache/
+.sass-cache/
+.eslintcache
+.npm/
+
+# ------------------------------------------------------------------------------
+# IDEs y editores
+# ------------------------------------------------------------------------------
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.history/*
+
+# Visual Studio Code (se versionan algunos archivos del workspace)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ------------------------------------------------------------------------------
+# Archivos del sistema operativo
+# ------------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+/connect.lock
+/libpeerconnection.log
+__screenshots__/
