@@ -1,0 +1,3228 @@
+openapi: 3.1.0
+
+info:
+  title: ValidaLab API
+  summary: Contrato de API único de ValidaLab — fuente de verdad entre frontend y backend.
+  description: |
+    Este documento OpenAPI es la **fuente de verdad única** del contrato de API de ValidaLab.
+    Tanto `frontend/` como `backend/` desarrollan contra este documento sin conocer ni depender
+    del código del otro paquete. Cualquier endpoint, payload o comportamiento de borde entre
+    cliente y servidor se define **aquí primero** y solo después se implementa.
+
+    Es un **único documento** (no fragmentado por módulos). La navegación por dominio se hace
+    mediante los `tags` declarados más abajo (`usuarios`, `ideas`, `contactos`, `entrevistas`,
+    `kpis`, `agente`, `proveedores`), que se corresponden con los módulos de dominio del backend.
+
+    ## Convenciones transversales
+
+    Estas reglas aplican a **todos** los endpoints. El resumen normativo vive también en el
+    `CLAUDE.md` de la raíz; el detalle (catálogo de errores, esquemas concretos) vive aquí.
+
+    ### Autenticación
+    Todas las operaciones (salvo registro y login) requieren un **JWT** en
+    `Authorization: Bearer <token>` (esquema `bearerAuth`). Una petición sin token válido
+    devuelve `401` con el error `NO_AUTENTICADO`.
+
+    ### Aislamiento multi-tenant por `owner_id` (RNF-04, RNF-05)
+    ValidaLab es multi-tenant desde la primera versión. El `owner_id` se deriva **siempre** del
+    token autenticado, **nunca** se acepta como parámetro de entrada del cliente. Cada consulta
+    filtra por el `owner_id` del usuario autenticado: ningún usuario accede a datos de otro.
+    Solicitar un recurso de otro propietario devuelve `403 ACCESO_DENEGADO` sin revelar datos.
+
+    ### Formato de error
+    Todos los errores usan el esquema `Error` (ver `components.schemas.Error`) con un `codigo`
+    estable del catálogo (`components.schemas.CodigoError`). El catálogo completo de códigos vive
+    en este documento, no en `CLAUDE.md`.
+
+    ### Paginación
+    Las colecciones se paginan con los parámetros reutilizables `pagina` y `porPagina`
+    (`components.parameters`) y devuelven el sobre `RespuestaPaginada` con un bloque `paginacion`.
+
+    ### Convención de nombres
+    - Rutas en **plural** y kebab-case: `/ideas`, `/contactos`, `/entrevistas`.
+    - Campos JSON en **camelCase** y en **español** (terminología del SRS): `idea`, `hipotesis`,
+      `entrevista`, `veredicto`, `umbral`, `score`, `contacto`, `ownerId`.
+    - Identificadores de recurso: `id` (formato `uuid`).
+  version: 0.1.0
+  contact:
+    name: ValidaLab
+
+servers:
+  - url: http://localhost:3000
+    description: Desarrollo local (puerto por defecto del backend NestJS; PORT lo sobreescribe)
+  - url: https://api.validalab.example
+    description: Producción (placeholder)
+
+# Seguridad aplicada globalmente: todos los endpoints requieren JWT salvo que lo anulen con `security: []`.
+security:
+  - bearerAuth: []
+
+tags:
+  - name: usuarios
+    description: Cuentas, autenticación, RBAC y aislamiento multi-tenant (épica E0).
+  - name: ideas
+    description: Portafolio de ideas, hipótesis y umbrales kill/go por idea (épicas E1, E2).
+  - name: contactos
+    description: CRM de contactos y embudo de outreach (épica E3).
+  - name: entrevistas
+    description: Pipeline de entrevistas y registro de respuestas con scoring del agente (épica E4).
+  - name: kpis
+    description: KPIs agregados por idea y tablero de decisión (épica E5).
+  - name: agente
+    description: Validador Inteligente — scoring de entrevistas y veredicto de idea (épica E6).
+  - name: proveedores
+    description: Configuración BYOK del proveedor de IA, modelos y costo estimado (épicas E7, E8).
+
+# Los endpoints se definen por dominio bajo sus `tags`, todos dentro de este mismo documento.
+# Módulo `usuarios` (épica E0) definido. Los demás módulos se irán añadiendo aquí.
+paths:
+  /usuarios/registro:
+    post:
+      tags: [usuarios]
+      summary: Registrar una cuenta nueva
+      description: Endpoint público. Crea la cuenta con rol `validador` y estado `activo` por defecto.
+      operationId: registrarUsuario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroUsuarioRequest'
+      responses:
+        '201':
+          description: Cuenta creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  /usuarios/login:
+    post:
+      tags: [usuarios]
+      summary: Autenticarse y obtener tokens
+      description: Endpoint público. Devuelve `accessToken` y `refreshToken`.
+      operationId: iniciarSesion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Autenticación correcta.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRespuesta'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /usuarios/refresh:
+    post:
+      tags: [usuarios]
+      summary: Renovar el token de acceso
+      description: |
+        Endpoint público (el `accessToken` puede haber expirado). Intercambia un `refreshToken`
+        válido por un `TokenRespuesta` nuevo. Un `refreshToken` inválido o expirado → `401`.
+      operationId: refrescarToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefrescarTokenRequest'
+      responses:
+        '200':
+          description: Token renovado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRespuesta'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /usuarios/logout:
+    post:
+      tags: [usuarios]
+      summary: Cerrar sesión
+      description: Invalida el `refreshToken` de la sesión. Requiere estar autenticado.
+      operationId: cerrarSesion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefrescarTokenRequest'
+      responses:
+        '204':
+          description: Sesión cerrada; el `refreshToken` deja de ser válido.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /usuarios/yo:
+    get:
+      tags: [usuarios]
+      summary: Consultar el perfil propio
+      description: Resuelve el usuario a partir del token; no recibe `id`.
+      operationId: obtenerPerfilPropio
+      responses:
+        '200':
+          description: Perfil del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+    patch:
+      tags: [usuarios]
+      summary: Actualizar el perfil propio
+      description: Solo permite cambiar datos del propio perfil (p. ej. `nombre`); no el `rol` ni el `estado`.
+      operationId: actualizarPerfilPropio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarPerfilRequest'
+      responses:
+        '200':
+          description: Perfil actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  /usuarios:
+    get:
+      tags: [usuarios]
+      summary: Listar cuentas (solo administrador)
+      description: Requiere rol `administrador` (RBAC). Un `validador` recibe `403 ACCESO_DENEGADO`.
+      operationId: listarUsuarios
+      parameters:
+        - $ref: '#/components/parameters/pagina'
+        - $ref: '#/components/parameters/porPagina'
+      responses:
+        '200':
+          description: Página de cuentas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuariosPaginados'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+
+  /usuarios/{id}:
+    get:
+      tags: [usuarios]
+      summary: Consultar una cuenta (solo administrador)
+      description: Requiere rol `administrador` (RBAC). Un `validador` recibe `403 ACCESO_DENEGADO`.
+      operationId: obtenerUsuario
+      parameters:
+        - $ref: '#/components/parameters/idUsuario'
+      responses:
+        '200':
+          description: Cuenta solicitada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /usuarios/{id}/rol:
+    patch:
+      tags: [usuarios]
+      summary: Cambiar el rol de una cuenta (solo administrador)
+      description: Requiere rol `administrador` (RBAC). Un `validador` recibe `403 ACCESO_DENEGADO`.
+      operationId: cambiarRolUsuario
+      parameters:
+        - $ref: '#/components/parameters/idUsuario'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarRolRequest'
+      responses:
+        '200':
+          description: Rol actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  /usuarios/{id}/estado:
+    patch:
+      tags: [usuarios]
+      summary: Cambiar el estado de una cuenta (solo administrador)
+      description: Requiere rol `administrador` (RBAC). Permite suspender/activar una cuenta. Un `validador` recibe `403 ACCESO_DENEGADO`.
+      operationId: cambiarEstadoUsuario
+      parameters:
+        - $ref: '#/components/parameters/idUsuario'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarEstadoRequest'
+      responses:
+        '200':
+          description: Estado actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  /ideas:
+    post:
+      tags: [ideas]
+      summary: Crear una idea
+      description: Crea una idea en estado `borrador`, asociada al usuario autenticado (`ownerId` derivado del token).
+      operationId: crearIdea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearIdeaRequest'
+      responses:
+        '201':
+          description: Idea creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Idea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    get:
+      tags: [ideas]
+      summary: Listar las ideas propias
+      description: Devuelve solo las ideas del usuario autenticado, paginadas. Admite filtro opcional por `estado`.
+      operationId: listarIdeas
+      parameters:
+        - $ref: '#/components/parameters/pagina'
+        - $ref: '#/components/parameters/porPagina'
+        - $ref: '#/components/parameters/filtroEstadoIdea'
+      responses:
+        '200':
+          description: Página de ideas propias.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdeasPaginadas'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /ideas/{id}:
+    get:
+      tags: [ideas]
+      summary: Consultar una idea propia
+      operationId: obtenerIdea
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Idea solicitada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Idea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+    patch:
+      tags: [ideas]
+      summary: Editar el contenido de una idea propia
+      description: Edita el contenido (`titulo`, `descripcion`, `problema`, `segmentoBeachhead`). No permite fijar el `estado` a `go`/`pivote`/`kill`, que provienen del veredicto aprobado (E6).
+      operationId: actualizarIdea
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarIdeaRequest'
+      responses:
+        '200':
+          description: Idea actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Idea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  /ideas/{id}/archivar:
+    post:
+      tags: [ideas]
+      summary: Archivar una idea
+      description: Marca la idea propia como `archivada` conservando su evidencia; no la elimina.
+      operationId: archivarIdea
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Idea archivada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Idea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/desarchivar:
+    post:
+      tags: [ideas]
+      summary: Reabrir (desarchivar) una idea archivada
+      description: Devuelve una idea `archivada` al estado `borrador` para retomarla, conservando su evidencia. Si la idea no estaba archivada, responde `409`.
+      operationId: desarchivarIdea
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Idea reabierta en estado `borrador`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Idea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+
+  # --- Hipótesis y umbrales por idea (épica E2), anidados bajo el tag `ideas` ---
+
+  /ideas/{id}/hipotesis:
+    post:
+      tags: [ideas]
+      summary: Registrar una hipótesis de la idea
+      description: |
+        Crea una hipótesis tipificada (`problema`/`mercado`/`pago`) asociada a una idea propia.
+        La hipótesis nace en estado `pendiente`; su `ideaId` se deriva del path, nunca del cuerpo.
+      operationId: crearHipotesis
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearHipotesisRequest'
+      responses:
+        '201':
+          description: Hipótesis creada en estado `pendiente`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hipotesis'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    get:
+      tags: [ideas]
+      summary: Listar las hipótesis de la idea
+      description: Devuelve las hipótesis de una idea propia como arreglo (sin paginar, por ser una colección pequeña).
+      operationId: listarHipotesis
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Hipótesis de la idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HipotesisLista'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/hipotesis/{idHipotesis}:
+    patch:
+      tags: [ideas]
+      summary: Editar una hipótesis y marcar su estado
+      description: |
+        Edita el `tipo`/`enunciado` de una hipótesis propia y/o marca su `estado`
+        (`confirmada`/`refutada`/`pendiente`). El cuerpo no permite cambiar el `ideaId`.
+      operationId: actualizarHipotesis
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idHipotesis'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarHipotesisRequest'
+      responses:
+        '200':
+          description: Hipótesis actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hipotesis'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    delete:
+      tags: [ideas]
+      summary: Eliminar una hipótesis
+      description: Elimina una hipótesis propia registrada por error.
+      operationId: eliminarHipotesis
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idHipotesis'
+      responses:
+        '204':
+          description: Hipótesis eliminada; sin contenido.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/umbrales:
+    get:
+      tags: [ideas]
+      summary: Consultar los umbrales kill/go de la idea
+      description: |
+        Devuelve el conjunto completo de umbrales de una idea propia: un `Umbral` por cada KPI del
+        catálogo (sección 7 del SRS), con los valores vigentes (los editados por la idea, o los valores
+        por defecto si no se han editado). `umbralKill` es `null` en los KPIs sin zona kill.
+      operationId: listarUmbrales
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Conjunto de umbrales de la idea, uno por KPI.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmbralesIdea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/umbrales/{kpi}:
+    put:
+      tags: [ideas]
+      summary: Fijar el umbral kill/go de un KPI para la idea
+      description: |
+        Operación idempotente que fija el `umbralGo` y, cuando aplica, el `umbralKill` de un KPI
+        concreto para una idea propia. El `{kpi}` debe ser una clave del catálogo `Kpi`; un valor
+        fuera del catálogo responde `404`. Un `umbralKill` mayor que `umbralGo` responde `422`.
+      operationId: fijarUmbral
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/kpi'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarUmbralRequest'
+      responses:
+        '200':
+          description: Umbral actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Umbral'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  # --- CRM de contactos y embudo de outreach (épica E3), anidados bajo la idea ---
+
+  /ideas/{id}/contactos:
+    post:
+      tags: [contactos]
+      summary: Registrar un contacto de la idea
+      description: |
+        Crea un contacto candidato a entrevista asociado a una idea propia, con su `perfil`,
+        `canal` y `origen` (RF-05, HU-07). El contacto nace en estado `por_contactar`; su `ideaId`
+        se deriva del path, nunca del cuerpo. Cuando `origen` es `referido`, puede incluir
+        `referidoPorId` apuntando a otro contacto de la misma idea (HU-10).
+      operationId: crearContacto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearContactoRequest'
+      responses:
+        '201':
+          description: Contacto creado en estado `por_contactar`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contacto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    get:
+      tags: [contactos]
+      summary: Listar los contactos de la idea
+      description: |
+        Devuelve los contactos de una idea propia, paginados. Admite filtro opcional por `estado`
+        del embudo de outreach. Solo devuelve contactos de la idea del usuario autenticado.
+      operationId: listarContactos
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/pagina'
+        - $ref: '#/components/parameters/porPagina'
+        - $ref: '#/components/parameters/filtroEstadoOutreach'
+      responses:
+        '200':
+          description: Página de contactos de la idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactosPaginados'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/contactos/{idContacto}:
+    get:
+      tags: [contactos]
+      summary: Consultar un contacto propio
+      operationId: obtenerContacto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idContacto'
+      responses:
+        '200':
+          description: Contacto solicitado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contacto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+    patch:
+      tags: [contactos]
+      summary: Editar el contenido de un contacto
+      description: |
+        Edita el contenido de un contacto propio (`nombre`, `perfil`, `enlace`, `canal`, `origen`,
+        `referidoPorId`, `notas`). No permite cambiar el `ideaId` ni el `estado` del embudo (este se
+        mueve con la acción de transición) ni las fechas de toque (se registran con la acción de toque).
+      operationId: actualizarContacto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idContacto'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarContactoRequest'
+      responses:
+        '200':
+          description: Contacto actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contacto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    delete:
+      tags: [contactos]
+      summary: Eliminar un contacto
+      description: Elimina un contacto propio registrado por error.
+      operationId: eliminarContacto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idContacto'
+      responses:
+        '204':
+          description: Contacto eliminado; sin contenido.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/contactos/{idContacto}/estado:
+    post:
+      tags: [contactos]
+      summary: Transicionar un contacto por el embudo de outreach
+      description: |
+        Mueve un contacto propio entre los estados del embudo
+        `por_contactar → contactado → respondio → agendado → entrevistado → descartado` (RF-06, HU-08).
+        `descartado` es alcanzable desde cualquier estado no terminal. El estado `entrevistado` NO se
+        asigna por esta vía: solo lo fija el registro de una entrevista (E4); pedirlo aquí responde `409`.
+        Cualquier otra transición no permitida del embudo también responde `409 CONFLICTO`.
+      operationId: transicionarContacto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idContacto'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransicionEstadoRequest'
+      responses:
+        '200':
+          description: Contacto con su nuevo estado del embudo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contacto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  /ideas/{id}/contactos/{idContacto}/toques:
+    post:
+      tags: [contactos]
+      summary: Registrar un toque de outreach (máximo dos)
+      description: |
+        Registra un toque sobre un contacto propio con su fecha (RF-07, HU-09). El primer toque fija
+        `primerToqueEn`; el segundo (único follow-up) fija `segundoToqueEn`. La `fecha` es opcional
+        (por defecto, el momento del registro). Un tercer toque responde `409 CONFLICTO` por exceder
+        el límite de dos toques por contacto.
+      operationId: registrarToqueContacto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idContacto'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarToqueRequest'
+      responses:
+        '200':
+          description: Contacto con el toque registrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contacto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+
+  # --- Guión de entrevista reutilizable (épica E4), recurso de nivel de usuario ---
+
+  /guiones:
+    post:
+      tags: [entrevistas]
+      summary: Crear un guión de entrevista
+      description: |
+        Crea un guión reutilizable **entre ideas** (RF-08, HU-11), con sus preguntas ordenadas.
+        El `ownerId` se deriva del token, nunca del cuerpo.
+      operationId: crearGuion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearGuionRequest'
+      responses:
+        '201':
+          description: Guión creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guion'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    get:
+      tags: [entrevistas]
+      summary: Listar los guiones propios
+      description: Devuelve solo los guiones del usuario autenticado, paginados.
+      operationId: listarGuiones
+      parameters:
+        - $ref: '#/components/parameters/pagina'
+        - $ref: '#/components/parameters/porPagina'
+      responses:
+        '200':
+          description: Página de guiones propios.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuionesPaginados'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /guiones/{idGuion}:
+    get:
+      tags: [entrevistas]
+      summary: Consultar un guión propio
+      operationId: obtenerGuion
+      parameters:
+        - $ref: '#/components/parameters/idGuion'
+      responses:
+        '200':
+          description: Guión solicitado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guion'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+    patch:
+      tags: [entrevistas]
+      summary: Editar un guión propio
+      description: Edita el `nombre`, la `descripcion` y/o las `preguntas` (reemplazando el conjunto ordenado).
+      operationId: actualizarGuion
+      parameters:
+        - $ref: '#/components/parameters/idGuion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarGuionRequest'
+      responses:
+        '200':
+          description: Guión actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guion'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    delete:
+      tags: [entrevistas]
+      summary: Eliminar un guión propio
+      operationId: eliminarGuion
+      parameters:
+        - $ref: '#/components/parameters/idGuion'
+      responses:
+        '204':
+          description: Guión eliminado; sin contenido.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  # --- Entrevistas y scoring por IA (épica E4), anidadas bajo la idea ---
+
+  /ideas/{id}/entrevistas:
+    post:
+      tags: [entrevistas]
+      summary: Registrar una entrevista
+      description: |
+        Crea una entrevista de una idea propia vinculada a un `contactoId` de esa misma idea y a un
+        `guionId` propio, con las `respuestas` capturadas y, opcionalmente, `citas` (RF-09, HU-13/14).
+        El cuerpo NO acepta `score`: registrar la entrevista dispara el scoring automático del agente
+        (RF-09b). Crear la entrevista mueve el contacto al estado `entrevistado`.
+        Idea o contacto sin vínculo válido del mismo usuario → `422 ENTREVISTA_SIN_VINCULO` (RNF-14).
+        Un contacto ya `entrevistado` o `descartado` → `409 CONFLICTO`.
+      operationId: crearEntrevista
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearEntrevistaRequest'
+      responses:
+        '201':
+          description: Entrevista creada; el scoring del agente queda disparado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entrevista'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    get:
+      tags: [entrevistas]
+      summary: Listar las entrevistas de la idea
+      description: Devuelve las entrevistas de una idea propia, paginadas, con filtros opcionales por `contactoId` y `estadoScoring`.
+      operationId: listarEntrevistas
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/pagina'
+        - $ref: '#/components/parameters/porPagina'
+        - $ref: '#/components/parameters/filtroContacto'
+        - $ref: '#/components/parameters/filtroEstadoScoring'
+      responses:
+        '200':
+          description: Página de entrevistas de la idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntrevistasPaginadas'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/entrevistas/{idEntrevista}:
+    get:
+      tags: [entrevistas]
+      summary: Consultar una entrevista propia
+      description: Devuelve la entrevista con sus `respuestas`, `citas`, el bloque `score` del agente y el `ajuste` del usuario si existe.
+      operationId: obtenerEntrevista
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idEntrevista'
+      responses:
+        '200':
+          description: Entrevista solicitada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entrevista'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+    patch:
+      tags: [entrevistas]
+      summary: Editar las respuestas y citas de una entrevista
+      description: |
+        Edita las `respuestas` y/o `citas` de una entrevista propia. No permite cambiar `ideaId`,
+        `contactoId`, `guionId` ni el bloque `score`. Cambiar las `respuestas` invalida el score previo
+        (la entrevista vuelve a `estadoScoring` `pendiente` y se re-dispara el scoring); cambiar solo las
+        `citas` no afecta el scoring.
+      operationId: actualizarEntrevista
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idEntrevista'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarEntrevistaRequest'
+      responses:
+        '200':
+          description: Entrevista actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entrevista'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+    delete:
+      tags: [entrevistas]
+      summary: Eliminar una entrevista
+      operationId: eliminarEntrevista
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idEntrevista'
+      responses:
+        '204':
+          description: Entrevista eliminada; sin contenido.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/entrevistas/{idEntrevista}/puntuar:
+    post:
+      tags: [entrevistas]
+      summary: (Re)disparar el scoring del agente
+      description: |
+        Dispara o vuelve a disparar el scoring del agente sobre una entrevista propia (RF-09b),
+        p. ej. tras un `estadoScoring` `fallida`. El bloque `score` es de solo lectura: lo produce el
+        agente, nunca el cliente. Si la salida del agente no valida tras reintentos (RF-AG-03), el
+        `estadoScoring` queda `fallida`, sin romper el flujo.
+      operationId: puntuarEntrevista
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idEntrevista'
+      responses:
+        '200':
+          description: Entrevista con su `estadoScoring` actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entrevista'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/entrevistas/{idEntrevista}/ajuste-score:
+    post:
+      tags: [entrevistas]
+      summary: Ajustar el score del agente
+      description: |
+        Registra el ajuste humano del score con `scoreAjustado` y una `nota` (RF-09c, HU-12b),
+        **conservando ambos valores**: el `score` del agente y el `ajuste` del usuario. El `ajuste`
+        es el valor que prevalece en el cálculo de los KPIs (E5).
+      operationId: ajustarScoreEntrevista
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idEntrevista'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AjustarScoreRequest'
+      responses:
+        '200':
+          description: Entrevista con el `score` del agente intacto y el `ajuste` registrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entrevista'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  # --- KPIs, tablero de decisión y alertas (épica E5), anidados bajo la idea ---
+
+  /ideas/{id}/kpis:
+    get:
+      tags: [kpis]
+      summary: Consultar el tablero de KPIs de la idea
+      description: |
+        Devuelve el tablero (`TableroIdea`) de una idea propia: el conjunto completo de KPIs de la
+        sección 7 del SRS calculados a partir de las entrevistas, cada uno con su `valor`, sus umbrales
+        vigentes y su `zona` de semáforo (RF-11/12, HU-15/16). El `score_promedio_entrevista` usa el
+        ajuste del usuario cuando existe (E4). Un KPI sin evidencia suficiente trae `valor` `null` y
+        `zona` `sin_datos`.
+      operationId: obtenerTableroKpis
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Tablero de KPIs de la idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableroIdea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/alertas:
+    get:
+      tags: [kpis]
+      summary: Listar las alertas de cruce de umbral de la idea
+      description: |
+        Devuelve las alertas (`AlertaKpi`) de una idea propia generadas por el sistema cuando un KPI
+        cruza su umbral kill o go (RF-13, HU-17), paginadas y con filtro opcional por `leida`. Las
+        alertas no se crean desde el cliente.
+      operationId: listarAlertas
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/pagina'
+        - $ref: '#/components/parameters/porPagina'
+        - $ref: '#/components/parameters/filtroLeida'
+      responses:
+        '200':
+          description: Página de alertas de la idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertasPaginadas'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/alertas/{idAlerta}:
+    patch:
+      tags: [kpis]
+      summary: Marcar una alerta como leída
+      description: Marca una alerta propia como `leida`. El cuerpo se limita al campo `leida`.
+      operationId: actualizarAlerta
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idAlerta'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarAlertaRequest'
+      responses:
+        '200':
+          description: Alerta actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertaKpi'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  # --- Validador Inteligente: veredicto de idea (épica E6), anidado bajo la idea ---
+
+  /ideas/{id}/veredictos:
+    post:
+      tags: [agente]
+      summary: Invocar al agente para emitir un veredicto
+      description: |
+        Invoca al Validador Inteligente sobre una idea propia para que analice sus KPIs vigentes y
+        emita un veredicto razonado `go`/`pivote`/`kill` (RF-14, HU-18). No recibe cuerpo: el proveedor
+        y el modelo provienen de la config BYOK del usuario (E7). El veredicto nace en verificación
+        `pendiente`. Sin proveedor BYOK configurado → `409`; salida del agente inválida tras reintentos
+        → `502`; proveedor de IA no disponible → `503`.
+      operationId: emitirVeredicto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '201':
+          description: Veredicto emitido, en verificación `pendiente`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Veredicto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '502':
+          $ref: '#/components/responses/SalidaAgenteInvalida'
+        '503':
+          $ref: '#/components/responses/ProveedorNoDisponible'
+    get:
+      tags: [agente]
+      summary: Listar el historial de veredictos de la idea
+      description: Devuelve el historial de veredictos de una idea propia, paginado (RF-17, HU-21).
+      operationId: listarVeredictos
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/pagina'
+        - $ref: '#/components/parameters/porPagina'
+      responses:
+        '200':
+          description: Página de veredictos de la idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeredictosPaginados'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/veredictos/{idVeredicto}:
+    get:
+      tags: [agente]
+      summary: Consultar un veredicto propio
+      description: Devuelve el veredicto con su salida, su `snapshotKpis` y su estado de verificación.
+      operationId: obtenerVeredicto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idVeredicto'
+      responses:
+        '200':
+          description: Veredicto solicitado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Veredicto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/veredictos/{idVeredicto}/verificacion:
+    post:
+      tags: [agente]
+      summary: Verificar un veredicto (aprobar o anular)
+      description: |
+        Gobierno consultivo del veredicto (RF-16, HU-20). Al **aprobar**, el veredicto queda firme y la
+        idea cambia al estado del veredicto (`go`/`pivote`/`kill`) —único camino legítimo para fijarlo—.
+        Al **anular**, se exige una `nota` y la idea no cambia de estado. Se conservan ambas versiones
+        (agente y usuario). Un veredicto ya verificado → `409`.
+      operationId: verificarVeredicto
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+        - $ref: '#/components/parameters/idVeredicto'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificarVeredictoRequest'
+      responses:
+        '200':
+          description: Veredicto verificado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Veredicto'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
+  # --- Configuración del proveedor de IA (BYOK) (épica E7) ---
+
+  /proveedores:
+    get:
+      tags: [proveedores]
+      summary: Listar el catálogo curado de proveedores y modelos
+      description: |
+        Devuelve los proveedores de IA soportados (`anthropic`, `openai`, `google`) y, por cada uno,
+        la lista curada de modelos idóneos para el análisis (RF-19, HU-24). Los ids de modelo son datos
+        actualizables sin redesplegar (RNF-18), no un enum del contrato. Catálogo global (curado por
+        administración), requiere autenticación.
+      operationId: listarProveedores
+      responses:
+        '200':
+          description: Catálogo de proveedores soportados con sus modelos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProveedorIA'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /proveedores/configuracion:
+    get:
+      tags: [proveedores]
+      summary: Consultar la configuración BYOK propia
+      description: |
+        Devuelve la configuración BYOK del usuario autenticado (proveedor y dos modelos por tarea),
+        **sin** la API key (RNF-07): solo `apiKeyRegistrada` indica su presencia. Si el usuario no ha
+        configurado BYOK, responde `404`.
+      operationId: obtenerConfiguracionByok
+      responses:
+        '200':
+          description: Configuración BYOK del usuario (sin la API key).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfiguracionByok'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+    put:
+      tags: [proveedores]
+      summary: Guardar o cambiar la configuración BYOK
+      description: |
+        Crea o reemplaza (idempotente) la configuración BYOK del usuario con `proveedor`, `apiKey` y los
+        dos modelos por tarea (RF-18/22/22b, HU-23/27/28). La `apiKey` es write-only: se acepta aquí pero
+        nunca se devuelve. Se valida contra el proveedor al guardarla (RF-20): key inválida → `422`
+        `API_KEY_INVALIDA`; modelo fuera del catálogo del proveedor → `422` `VALIDACION_FALLIDA`;
+        proveedor no disponible durante la validación → `503`.
+      operationId: guardarConfiguracionByok
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuardarByokRequest'
+      responses:
+        '200':
+          description: Configuración guardada (sin la API key).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfiguracionByok'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '422':
+          $ref: '#/components/responses/ApiKeyInvalida'
+        '503':
+          $ref: '#/components/responses/ProveedorNoDisponible'
+    delete:
+      tags: [proveedores]
+      summary: Revocar la configuración BYOK
+      description: Elimina la configuración BYOK del usuario, incluida su credencial cifrada.
+      operationId: eliminarConfiguracionByok
+      responses:
+        '204':
+          description: Configuración eliminada; sin contenido.
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  # --- Optimización y visibilidad de costo (épica E8) ---
+
+  /proveedores/precios:
+    get:
+      tags: [proveedores]
+      summary: Consultar la tabla de precios por modelo
+      description: |
+        Devuelve la tabla de precios por modelo (RF-22e): por proveedor y modelo, el precio de entrada,
+        de salida y de entrada cacheada por millón de tokens, con su `moneda` y `vigenteDesde`. Los
+        precios son datos configurables y actualizables sin redesplegar (RNF-18), no valores cableados.
+        Tabla global (curada por administración), requiere autenticación.
+      operationId: listarPrecios
+      responses:
+        '200':
+          description: Tabla de precios por modelo.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrecioModelo'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /costo:
+    get:
+      tags: [proveedores]
+      summary: Consultar el costo estimado total propio
+      description: |
+        Devuelve el costo estimado acumulado total del usuario autenticado, agregado sobre todas sus
+        ideas y con desglose por idea (RF-22f, HU-29). El `owner_id` se deriva del token. Es un estimado
+        del consumo vía ValidaLab, **NO** el saldo de la cuenta (RNF-17); incluye `urlFacturacion` para
+        recargar en el panel del proveedor (RF-22g, HU-31).
+      operationId: obtenerCostoUsuario
+      responses:
+        '200':
+          description: Costo estimado total del usuario, con desglose por idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostoUsuario'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+
+  /ideas/{id}/costo:
+    get:
+      tags: [proveedores]
+      summary: Consultar el costo estimado de una idea
+      description: |
+        Devuelve el costo estimado acumulado del consumo de IA de una idea propia, con desglose por
+        tarea (`scoring`/`veredicto`), tokens y número de llamadas (RF-22f, HU-29). Es un estimado del
+        consumo vía ValidaLab, **NO** el saldo (RNF-17); incluye `urlFacturacion` para recargar
+        (RF-22g, HU-31). Una idea ajena responde `403`; inexistente, `404`.
+      operationId: obtenerCostoIdea
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Costo estimado acumulado de la idea.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostoIdea'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/entrevistas/reevaluacion/estimacion:
+    get:
+      tags: [entrevistas]
+      summary: Estimar el costo de una re-evaluación en lote
+      description: |
+        Calcula, **sin ejecutar**, el costo estimado de re-evaluar las entrevistas de una idea propia
+        cuya entrada cambió tras un cambio de rúbrica (RF-22h, HU-32): entrevistas afectadas, tokens
+        estimados y costo estimado con el `modeloScoring` configurado. No muta ni re-puntúa nada. El
+        usuario usa este estimado para decidir antes de confirmar la ejecución.
+      operationId: estimarReevaluacionLote
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      responses:
+        '200':
+          description: Estimación de costo de la re-evaluación (sin ejecutar).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimacionReevaluacion'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+
+  /ideas/{id}/entrevistas/reevaluacion:
+    post:
+      tags: [entrevistas]
+      summary: Ejecutar una re-evaluación en lote
+      description: |
+        Re-evalúa en lote las entrevistas de una idea propia tras la confirmación del usuario (RF-22h,
+        HU-32). El cuerpo acepta opcionalmente `idsEntrevistas`; por defecto re-evalúa las entrevistas
+        cuya entrada cambió (distinto `hashEntrada`). Es una acción **explícita**: un cambio de rúbrica
+        no la dispara automáticamente. Las entrevistas sin cambios se omiten por idempotencia (RF-22c).
+        Sin BYOK configurado responde `409`; si el proveedor no responde, `503`.
+      operationId: ejecutarReevaluacionLote
+      parameters:
+        - $ref: '#/components/parameters/idIdea'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReevaluacionLoteRequest'
+      responses:
+        '200':
+          description: Resultado de la re-evaluación (re-puntuadas, omitidas y costo estimado).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoReevaluacion'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '403':
+          $ref: '#/components/responses/AccesoDenegado'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '503':
+          $ref: '#/components/responses/ProveedorNoDisponible'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT emitido por ValidaLab tras el login. El `owner_id` del usuario se deriva del token;
+        nunca se acepta como entrada del cliente.
+
+  parameters:
+    pagina:
+      name: pagina
+      in: query
+      required: false
+      description: Número de página (base 1).
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    porPagina:
+      name: porPagina
+      in: query
+      required: false
+      description: Cantidad de elementos por página.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    idUsuario:
+      name: id
+      in: path
+      required: true
+      description: Identificador de la cuenta de usuario.
+      schema:
+        type: string
+        format: uuid
+    idIdea:
+      name: id
+      in: path
+      required: true
+      description: Identificador de la idea.
+      schema:
+        type: string
+        format: uuid
+    filtroEstadoIdea:
+      name: estado
+      in: query
+      required: false
+      description: Filtra el listado por estado de validación de la idea.
+      schema:
+        $ref: '#/components/schemas/EstadoIdea'
+    idHipotesis:
+      name: idHipotesis
+      in: path
+      required: true
+      description: Identificador de la hipótesis dentro de la idea.
+      schema:
+        type: string
+        format: uuid
+    kpi:
+      name: kpi
+      in: path
+      required: true
+      description: Clave estable del KPI del catálogo (sección 7 del SRS).
+      schema:
+        $ref: '#/components/schemas/Kpi'
+    idContacto:
+      name: idContacto
+      in: path
+      required: true
+      description: Identificador del contacto dentro de la idea.
+      schema:
+        type: string
+        format: uuid
+    filtroEstadoOutreach:
+      name: estado
+      in: query
+      required: false
+      description: Filtra el listado de contactos por su estado en el embudo de outreach.
+      schema:
+        $ref: '#/components/schemas/EstadoOutreach'
+    idGuion:
+      name: idGuion
+      in: path
+      required: true
+      description: Identificador del guión de entrevista.
+      schema:
+        type: string
+        format: uuid
+    idEntrevista:
+      name: idEntrevista
+      in: path
+      required: true
+      description: Identificador de la entrevista dentro de la idea.
+      schema:
+        type: string
+        format: uuid
+    filtroContacto:
+      name: contactoId
+      in: query
+      required: false
+      description: Filtra el listado de entrevistas por el contacto vinculado.
+      schema:
+        type: string
+        format: uuid
+    filtroEstadoScoring:
+      name: estadoScoring
+      in: query
+      required: false
+      description: Filtra el listado de entrevistas por el estado del scoring del agente.
+      schema:
+        $ref: '#/components/schemas/EstadoScoring'
+    idAlerta:
+      name: idAlerta
+      in: path
+      required: true
+      description: Identificador de la alerta dentro de la idea.
+      schema:
+        type: string
+        format: uuid
+    filtroLeida:
+      name: leida
+      in: query
+      required: false
+      description: Filtra el listado de alertas por su estado de lectura.
+      schema:
+        type: boolean
+    idVeredicto:
+      name: idVeredicto
+      in: path
+      required: true
+      description: Identificador del veredicto dentro de la idea.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    CodigoError:
+      type: string
+      description: |
+        Catálogo estable de códigos de error de ValidaLab. El cliente puede ramificar su lógica
+        sobre estos valores; el texto de `mensaje` es informativo y puede cambiar.
+      enum:
+        - VALIDACION_FALLIDA        # 400 — payload inválido o reglas de negocio no satisfechas
+        - NO_AUTENTICADO            # 401 — falta token o es inválido/expirado
+        - ACCESO_DENEGADO           # 403 — el recurso pertenece a otro owner_id (aislamiento)
+        - RECURSO_NO_ENCONTRADO     # 404 — el recurso no existe o no es visible para el usuario
+        - CONFLICTO                 # 409 — conflicto de estado (p. ej. transición de outreach inválida)
+        - ENTREVISTA_SIN_VINCULO    # 422 — entrevista sin idea o contacto válidos del mismo usuario (RNF-14)
+        - API_KEY_INVALIDA          # 422 — la API key BYOK no validó contra el proveedor (RF-20)
+        - SALIDA_AGENTE_INVALIDA    # 502 — la salida del agente no cumplió su esquema Zod tras reintentos (RF-AG-03)
+        - PROVEEDOR_IA_NO_DISPONIBLE # 503 — el proveedor de IA elegido no respondió (RNF-08)
+        - LIMITE_TASA               # 429 — demasiadas solicitudes
+        - ERROR_INTERNO             # 500 — error inesperado del servidor
+    Error:
+      type: object
+      description: Sobre estándar de error de toda la API.
+      required: [codigo, mensaje]
+      properties:
+        codigo:
+          $ref: '#/components/schemas/CodigoError'
+        mensaje:
+          type: string
+          description: Descripción legible del error (informativa, no estable).
+        detalles:
+          type: array
+          description: Errores de validación campo a campo, cuando aplica.
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+              problema:
+                type: string
+    Paginacion:
+      type: object
+      description: Metadatos de paginación que acompañan a toda colección.
+      required: [pagina, porPagina, total, totalPaginas]
+      properties:
+        pagina:
+          type: integer
+          description: Página actual (base 1).
+        porPagina:
+          type: integer
+          description: Elementos por página solicitados.
+        total:
+          type: integer
+          description: Total de elementos disponibles para el usuario autenticado.
+        totalPaginas:
+          type: integer
+          description: Total de páginas según `total` y `porPagina`.
+    RespuestaPaginada:
+      type: object
+      description: |
+        Sobre de respuesta para colecciones. Los endpoints concretos reemplazan/estrechan
+        `datos` con el tipo de recurso correspondiente.
+      required: [datos, paginacion]
+      properties:
+        datos:
+          type: array
+          items: {}
+        paginacion:
+          $ref: '#/components/schemas/Paginacion'
+
+    # --- Módulo usuarios (épica E0) ---
+
+    Rol:
+      type: string
+      description: Rol del usuario para RBAC.
+      enum:
+        - validador      # usuario primario; gestiona su propio portafolio aislado
+        - administrador  # gestiona cuentas, roles y estado de otros usuarios
+    EstadoUsuario:
+      type: string
+      description: Estado de la cuenta. Una cuenta `suspendido` no puede autenticarse.
+      enum:
+        - activo
+        - suspendido
+    Usuario:
+      type: object
+      description: |
+        Recurso de cuenta de usuario. NUNCA incluye la contraseña ni su hash en ninguna respuesta.
+      required: [id, email, nombre, rol, estado, fechaCreacion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        nombre:
+          type: string
+        rol:
+          $ref: '#/components/schemas/Rol'
+        estado:
+          $ref: '#/components/schemas/EstadoUsuario'
+        fechaCreacion:
+          type: string
+          format: date-time
+    RegistroUsuarioRequest:
+      type: object
+      required: [email, nombre, password]
+      properties:
+        email:
+          type: string
+          format: email
+        nombre:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          format: password
+          minLength: 8
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    RefrescarTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          description: Token de renovación obtenido en el login.
+    TokenRespuesta:
+      type: object
+      description: Tokens de sesión emitidos en login y refresh.
+      required: [accessToken, refreshToken, tokenTipo, expiraEn, usuario]
+      properties:
+        accessToken:
+          type: string
+          description: "JWT de acceso para `Authorization: Bearer`."
+        refreshToken:
+          type: string
+          description: Token de renovación para `POST /usuarios/refresh`.
+        tokenTipo:
+          type: string
+          enum: [Bearer]
+          default: Bearer
+        expiraEn:
+          type: integer
+          description: Segundos de vigencia del `accessToken`.
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+    ActualizarPerfilRequest:
+      type: object
+      description: Cambios permitidos sobre el perfil propio (no incluye rol ni estado).
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+    CambiarRolRequest:
+      type: object
+      required: [rol]
+      properties:
+        rol:
+          $ref: '#/components/schemas/Rol'
+    CambiarEstadoRequest:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoUsuario'
+    UsuariosPaginados:
+      description: Página de cuentas de usuario (sobre `RespuestaPaginada` con `datos` de `Usuario`).
+      allOf:
+        - $ref: '#/components/schemas/RespuestaPaginada'
+        - type: object
+          properties:
+            datos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Usuario'
+
+    # --- Módulo ideas (épica E1) ---
+
+    EstadoIdea:
+      type: string
+      description: Estado de validación de una idea.
+      enum:
+        - borrador        # recién creada; aún sin trabajo de validación
+        - en_validacion   # con descubrimiento en curso (se origina con entrevistas, E4)
+        - go              # veredicto aprobado: continuar (E6)
+        - pivote          # veredicto aprobado: pivotar (E6)
+        - kill            # veredicto aprobado: descartar (E6)
+        - archivada       # retirada del tablero activo, conservando su evidencia
+    Idea:
+      type: object
+      description: Idea de software en validación. Entidad raíz del dominio, aislada por usuario.
+      required: [id, ownerId, titulo, problema, estado, fechaCreacion, fechaActualizacion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Propietario de la idea; derivado del token, nunca aceptado como entrada.
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        problema:
+          type: string
+        segmentoBeachhead:
+          type: string
+          description: Segmento de mercado inicial sobre el que se concentra la validación.
+        estado:
+          $ref: '#/components/schemas/EstadoIdea'
+        fechaCreacion:
+          type: string
+          format: date-time
+        fechaActualizacion:
+          type: string
+          format: date-time
+    CrearIdeaRequest:
+      type: object
+      required: [titulo, problema]
+      properties:
+        titulo:
+          type: string
+          minLength: 1
+        descripcion:
+          type: string
+        problema:
+          type: string
+          minLength: 1
+        segmentoBeachhead:
+          type: string
+    ActualizarIdeaRequest:
+      type: object
+      description: Cambios de contenido de una idea. No incluye `estado` ni `ownerId`.
+      properties:
+        titulo:
+          type: string
+          minLength: 1
+        descripcion:
+          type: string
+        problema:
+          type: string
+          minLength: 1
+        segmentoBeachhead:
+          type: string
+    IdeasPaginadas:
+      description: Página de ideas (sobre `RespuestaPaginada` con `datos` de `Idea`).
+      allOf:
+        - $ref: '#/components/schemas/RespuestaPaginada'
+        - type: object
+          properties:
+            datos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Idea'
+
+    # --- Hipótesis por idea (épica E2) ---
+
+    TipoHipotesis:
+      type: string
+      description: Dimensión falsable que la hipótesis pone a prueba.
+      enum:
+        - problema   # el problema existe y duele
+        - mercado    # hay un segmento alcanzable que lo padece
+        - pago       # hay disposición a pagar por resolverlo
+    EstadoHipotesis:
+      type: string
+      description: Estado de aprendizaje de la hipótesis. Una hipótesis nace `pendiente`.
+      enum:
+        - pendiente
+        - confirmada
+        - refutada
+    Hipotesis:
+      type: object
+      description: Afirmación falsable sobre el problema, el mercado o el pago, asociada a una idea.
+      required: [id, ideaId, tipo, enunciado, estado, fechaCreacion, fechaActualizacion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ideaId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Idea a la que pertenece; derivado del path, nunca aceptado como entrada.
+        tipo:
+          $ref: '#/components/schemas/TipoHipotesis'
+        enunciado:
+          type: string
+          description: Afirmación falsable que se contrasta con la evidencia.
+        estado:
+          $ref: '#/components/schemas/EstadoHipotesis'
+        fechaCreacion:
+          type: string
+          format: date-time
+        fechaActualizacion:
+          type: string
+          format: date-time
+    CrearHipotesisRequest:
+      type: object
+      description: Alta de hipótesis. No incluye `ideaId` (lo da el path) ni `estado` (nace `pendiente`).
+      required: [tipo, enunciado]
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoHipotesis'
+        enunciado:
+          type: string
+          minLength: 1
+    ActualizarHipotesisRequest:
+      type: object
+      description: Cambios sobre una hipótesis (todos opcionales). No incluye `ideaId`.
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoHipotesis'
+        enunciado:
+          type: string
+          minLength: 1
+        estado:
+          $ref: '#/components/schemas/EstadoHipotesis'
+    HipotesisLista:
+      type: array
+      description: Hipótesis de una idea (colección pequeña, sin paginar).
+      items:
+        $ref: '#/components/schemas/Hipotesis'
+
+    # --- Umbrales kill/go por KPI (épica E2) ---
+
+    KpiGrupo:
+      type: string
+      description: Grupo del embudo al que pertenece el KPI (sección 7 del SRS).
+      enum:
+        - outreach               # 7.1 alcance del outreach
+        - calidad_descubrimiento # 7.2 calidad del descubrimiento
+        - senal_problema         # 7.3 señal de problema
+        - senal_mercado_pago     # 7.4 señal de mercado y pago
+    UnidadKpi:
+      type: string
+      description: Cómo interpretar el valor numérico del umbral del KPI.
+      enum:
+        - porcentaje      # proporción 0–1 expresada como tasa (p. ej. 0.25 = 25%)
+        - conteo          # número absoluto (p. ej. n.º de entrevistas)
+        - conteo_semanal  # número por semana (velocidad de pipeline)
+        - ratio           # razón sin tope (p. ej. referidos por entrevista)
+        - puntaje_0_10    # puntaje en escala 0–10 (score promedio de entrevista)
+    Kpi:
+      type: string
+      description: |
+        Catálogo estable de KPIs de validación (sección 7 del SRS). Las claves son estructurales;
+        sus fórmulas y valores por defecto se definen en el dominio (cálculo de KPIs, épica E5).
+      enum:
+        # 7.1 — alcance (outreach)
+        - tasa_respuesta              # contactos que respondieron / contactados
+        - tasa_agendamiento           # entrevistas agendadas / contactos que respondieron
+        - tasa_conversion_entrevista  # entrevistas realizadas / contactos contactados
+        - velocidad_pipeline          # entrevistas realizadas / semana
+        # 7.2 — calidad del descubrimiento
+        - volumen_evidencia           # n.º total de entrevistas válidas por idea (sin zona kill)
+        - cobertura_segmento          # entrevistas al perfil beachhead / total
+        - score_promedio_entrevista   # promedio del score del agente (0–10), con ajustes del usuario
+        - densidad_citas              # entrevistas con cita textual de dolor / total (sin zona kill)
+        # 7.3 — señal de problema
+        - tasa_confirmacion_dolor     # entrevistas que confirman el dolor / total
+        - dolor_sin_solucion          # entrevistados sin solución que les sirva / total
+        - intensidad_dolor            # entrevistas que lo califican como 'urgente' / total
+        # 7.4 — señal de mercado y pago
+        - senal_disposicion_pago      # entrevistas con interés explícito en pagar / total
+        - compromiso_tangible         # contactos que ceden tiempo/datos/referido / total
+        - tasa_referidos              # referidos obtenidos / entrevistas realizadas
+    Umbral:
+      type: object
+      description: |
+        Umbral kill/go de un KPI para una idea. La zona GO es `≥ umbralGo` y la zona KILL `< umbralKill`;
+        `umbralKill` es `null` en los KPIs sin zona kill. Los umbrales son el criterio que el agente
+        pondera, no la decisión.
+      required: [kpi, grupo, unidad, umbralGo, umbralKill]
+      properties:
+        kpi:
+          $ref: '#/components/schemas/Kpi'
+        grupo:
+          allOf:
+            - $ref: '#/components/schemas/KpiGrupo'
+          readOnly: true
+          description: Grupo del KPI; informativo, no editable.
+        unidad:
+          allOf:
+            - $ref: '#/components/schemas/UnidadKpi'
+          readOnly: true
+          description: Unidad del KPI; informativa, no editable.
+        umbralGo:
+          type: number
+          description: Valor a partir del cual (`≥`) el KPI entra en zona GO.
+        umbralKill:
+          type: number
+          nullable: true
+          description: Valor por debajo del cual (`<`) el KPI entra en zona KILL; `null` si el KPI no tiene zona kill.
+    ActualizarUmbralRequest:
+      type: object
+      description: Fija ambos umbrales de un KPI para la idea (HU-05). `umbralGo` requerido.
+      required: [umbralGo]
+      properties:
+        umbralGo:
+          type: number
+        umbralKill:
+          type: number
+          nullable: true
+          description: Omitir o `null` si el KPI no tiene zona kill. No puede ser mayor que `umbralGo`.
+    UmbralesIdea:
+      type: array
+      description: Conjunto de umbrales de una idea, uno por cada KPI del catálogo.
+      items:
+        $ref: '#/components/schemas/Umbral'
+
+    # --- Módulo contactos (épica E3) ---
+
+    EstadoOutreach:
+      type: string
+      description: |
+        Estado del contacto en el embudo de outreach. Orden:
+        `por_contactar → contactado → respondio → agendado → entrevistado → descartado`.
+        `descartado` es alcanzable desde cualquier estado no terminal. `entrevistado` solo se
+        asigna al registrar una entrevista (E4), no por la acción manual de transición.
+      enum:
+        - por_contactar
+        - contactado
+        - respondio
+        - agendado
+        - entrevistado
+        - descartado
+    CanalContacto:
+      type: string
+      description: Canal por el que se contacta a la persona (outreach, típicamente en frío).
+      enum:
+        - linkedin
+        - correo
+        - mensajeria
+        - otro
+    OrigenContacto:
+      type: string
+      description: De dónde proviene el contacto. `referido` se acompaña de `referidoPorId`.
+      enum:
+        - busqueda_directa
+        - referido
+        - comunidad
+        - evento
+        - otro
+    Contacto:
+      type: object
+      description: |
+        Persona candidata a entrevista dentro del CRM de una idea. Información personal: nunca se
+        expone a un usuario distinto de su propietario. Cuelga de la idea, aislada por usuario.
+      required: [id, ideaId, nombre, canal, origen, estado, fechaCreacion, fechaActualizacion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ideaId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Idea a la que pertenece; derivado del path, nunca aceptado como entrada.
+        nombre:
+          type: string
+        perfil:
+          type: string
+          description: Perfil/cargo/segmento de la persona (HU-07).
+        enlace:
+          type: string
+          description: Handle o URL para alcanzar al contacto (p. ej. perfil de LinkedIn o correo).
+        canal:
+          $ref: '#/components/schemas/CanalContacto'
+        origen:
+          $ref: '#/components/schemas/OrigenContacto'
+        referidoPorId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Contacto de la misma idea que refirió a esta persona; `null` si no es referido (HU-10).
+        estado:
+          allOf:
+            - $ref: '#/components/schemas/EstadoOutreach'
+          readOnly: true
+          description: Posición en el embudo; se cambia con la acción de transición, no por edición de contenido.
+        primerToqueEn:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Fecha del primer toque de outreach; `null` si aún no se ha contactado.
+        segundoToqueEn:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: Fecha del segundo toque (único follow-up); `null` si no se ha hecho.
+        notas:
+          type: string
+        fechaCreacion:
+          type: string
+          format: date-time
+        fechaActualizacion:
+          type: string
+          format: date-time
+    CrearContactoRequest:
+      type: object
+      description: |
+        Alta de contacto. No incluye `ideaId` (lo da el path), `estado` (nace `por_contactar`)
+        ni fechas de toque (se registran con la acción de toque).
+      required: [nombre]
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        perfil:
+          type: string
+        enlace:
+          type: string
+        canal:
+          $ref: '#/components/schemas/CanalContacto'
+        origen:
+          $ref: '#/components/schemas/OrigenContacto'
+        referidoPorId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Contacto de la misma idea que refirió a esta persona (cuando `origen` es `referido`).
+    ActualizarContactoRequest:
+      type: object
+      description: |
+        Cambios de contenido de un contacto (todos opcionales). No incluye `ideaId`, `estado`
+        (se cambia con la acción de transición) ni fechas de toque.
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        perfil:
+          type: string
+        enlace:
+          type: string
+        canal:
+          $ref: '#/components/schemas/CanalContacto'
+        origen:
+          $ref: '#/components/schemas/OrigenContacto'
+        referidoPorId:
+          type: string
+          format: uuid
+          nullable: true
+        notas:
+          type: string
+    TransicionEstadoRequest:
+      type: object
+      description: Mueve el contacto al `estado` destino del embudo. Transiciones inválidas → `409`.
+      required: [estado]
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoOutreach'
+    RegistrarToqueRequest:
+      type: object
+      description: Registra un toque de outreach. Máximo dos toques por contacto (el tercero → `409`).
+      properties:
+        fecha:
+          type: string
+          format: date-time
+          description: Fecha del toque; si se omite, se asume el momento del registro.
+    ContactosPaginados:
+      description: Página de contactos (sobre `RespuestaPaginada` con `datos` de `Contacto`).
+      allOf:
+        - $ref: '#/components/schemas/RespuestaPaginada'
+        - type: object
+          properties:
+            datos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contacto'
+
+    # --- Guión de entrevista (épica E4) ---
+
+    Pregunta:
+      type: object
+      description: Pregunta ordenada de un guión de entrevista.
+      required: [id, orden, texto]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orden:
+          type: integer
+          minimum: 1
+          description: Posición de la pregunta dentro del guión (base 1).
+        texto:
+          type: string
+    PreguntaRequest:
+      type: object
+      description: Pregunta a registrar dentro de un guión.
+      required: [texto, orden]
+      properties:
+        orden:
+          type: integer
+          minimum: 1
+        texto:
+          type: string
+          minLength: 1
+    Guion:
+      type: object
+      description: Guión de entrevista reutilizable entre ideas, propiedad del usuario.
+      required: [id, ownerId, nombre, preguntas, fechaCreacion, fechaActualizacion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Propietario del guión; derivado del token, nunca aceptado como entrada.
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        preguntas:
+          type: array
+          description: Preguntas del guión en orden.
+          items:
+            $ref: '#/components/schemas/Pregunta'
+        fechaCreacion:
+          type: string
+          format: date-time
+        fechaActualizacion:
+          type: string
+          format: date-time
+    CrearGuionRequest:
+      type: object
+      description: Alta de guión. No incluye `ownerId` (lo da el token).
+      required: [nombre, preguntas]
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        descripcion:
+          type: string
+        preguntas:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PreguntaRequest'
+    ActualizarGuionRequest:
+      type: object
+      description: Cambios sobre un guión (todos opcionales). `preguntas` reemplaza el conjunto ordenado.
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        descripcion:
+          type: string
+        preguntas:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PreguntaRequest'
+    GuionesPaginados:
+      description: Página de guiones (sobre `RespuestaPaginada` con `datos` de `Guion`).
+      allOf:
+        - $ref: '#/components/schemas/RespuestaPaginada'
+        - type: object
+          properties:
+            datos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Guion'
+
+    # --- Entrevista y scoring por IA (épica E4) ---
+
+    EstadoScoring:
+      type: string
+      description: Estado del scoring del agente sobre la entrevista.
+      enum:
+        - pendiente   # scoring disparado, aún sin resultado
+        - puntuada    # el agente produjo un score válido
+        - fallida     # la salida del agente no validó tras reintentos (SALIDA_AGENTE_INVALIDA)
+    ScoreEntrevista:
+      type: object
+      readOnly: true
+      description: |
+        Resultado del scoring del agente. De solo lectura: lo produce el Validador Inteligente,
+        nunca el cliente. Lleva proveedor/modelo/versión de rúbrica para trazabilidad (RF-AG-07).
+      required: [score, justificacion, senales, confianza]
+      properties:
+        score:
+          type: number
+          minimum: 0
+          maximum: 10
+          description: Puntaje de calidad de la entrevista (0–10).
+        justificacion:
+          type: string
+        senales:
+          type: array
+          description: Señales de validación detectadas por el agente (definidas por la rúbrica).
+          items:
+            type: string
+        confianza:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Nivel de confianza del agente en el score (0–100).
+        proveedor:
+          type: string
+          description: Proveedor de IA que produjo el score (config BYOK del usuario).
+        modelo:
+          type: string
+          description: Modelo concreto usado para el scoring.
+        rubricaVersion:
+          type: string
+          description: Versión de la rúbrica aplicada (para trazabilidad e idempotencia).
+        hashEntrada:
+          type: string
+          description: |
+            Hash de las respuestas de la entrevista + la versión de rúbrica (E8, RF-22c). Criterio de
+            idempotencia: si no cambia, no se vuelve a invocar al agente; se conservan score y costo.
+        tokensEntrada:
+          type: integer
+          minimum: 0
+          description: Tokens de entrada consumidos por esta llamada de scoring (RF-22e).
+        tokensSalida:
+          type: integer
+          minimum: 0
+          description: Tokens de salida consumidos por esta llamada de scoring (RF-22e).
+        costoEstimado:
+          type: number
+          minimum: 0
+          description: |
+            Costo estimado de este scoring (tokens × tabla de precios), calculado localmente.
+            Es un estimado del consumo vía ValidaLab, NO el saldo de la cuenta (RNF-17).
+        moneda:
+          $ref: '#/components/schemas/Moneda'
+        fechaScoring:
+          type: string
+          format: date-time
+    AjusteScore:
+      type: object
+      readOnly: true
+      description: Ajuste humano del score, conservado junto al score del agente (RF-09c).
+      required: [scoreAjustado, nota, fechaAjuste]
+      properties:
+        scoreAjustado:
+          type: number
+          minimum: 0
+          maximum: 10
+        nota:
+          type: string
+          description: Motivo del ajuste registrado por el usuario.
+        fechaAjuste:
+          type: string
+          format: date-time
+    RespuestaEntrevista:
+      type: object
+      description: Respuesta capturada a una pregunta del guión.
+      required: [preguntaId, texto]
+      properties:
+        preguntaId:
+          type: string
+          format: uuid
+          description: Pregunta del guión a la que responde.
+        texto:
+          type: string
+    Cita:
+      type: object
+      description: Cita textual del entrevistado, como evidencia cualitativa (RF-10).
+      required: [id, texto]
+      properties:
+        id:
+          type: string
+          format: uuid
+        texto:
+          type: string
+        contexto:
+          type: string
+          description: Contexto o etiqueta opcional de la cita.
+    Entrevista:
+      type: object
+      description: |
+        Entrevista de descubrimiento vinculada a una idea y a un contacto del mismo usuario (RNF-14).
+        Cuelga de la idea, aislada por usuario. El bloque `score` lo produce el agente; el `ajuste`, el usuario.
+      required: [id, ideaId, contactoId, guionId, respuestas, citas, estadoScoring, fechaCreacion, fechaActualizacion]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ideaId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Idea a la que pertenece; derivado del path, nunca aceptado como entrada.
+        contactoId:
+          type: string
+          format: uuid
+          description: Contacto entrevistado (de la misma idea).
+        guionId:
+          type: string
+          format: uuid
+          description: Guión usado para conducir la entrevista.
+        respuestas:
+          type: array
+          items:
+            $ref: '#/components/schemas/RespuestaEntrevista'
+        citas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cita'
+        estadoScoring:
+          $ref: '#/components/schemas/EstadoScoring'
+        score:
+          allOf:
+            - $ref: '#/components/schemas/ScoreEntrevista'
+          nullable: true
+          description: Resultado del agente; `null` mientras el scoring está `pendiente` o `fallida`.
+        ajuste:
+          allOf:
+            - $ref: '#/components/schemas/AjusteScore'
+          nullable: true
+          description: Ajuste humano del score; `null` si el usuario no lo ha ajustado.
+        fechaCreacion:
+          type: string
+          format: date-time
+        fechaActualizacion:
+          type: string
+          format: date-time
+    CrearEntrevistaRequest:
+      type: object
+      description: |
+        Alta de entrevista. No incluye `ideaId` (lo da el path) ni `score` (lo produce el agente).
+        `contactoId` debe ser un contacto de la misma idea; `guionId`, un guión propio.
+      required: [contactoId, guionId, respuestas]
+      properties:
+        contactoId:
+          type: string
+          format: uuid
+        guionId:
+          type: string
+          format: uuid
+        respuestas:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RespuestaEntrevista'
+        citas:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrearCitaRequest'
+    CrearCitaRequest:
+      type: object
+      required: [texto]
+      properties:
+        texto:
+          type: string
+          minLength: 1
+        contexto:
+          type: string
+    ActualizarEntrevistaRequest:
+      type: object
+      description: |
+        Cambios sobre una entrevista (todos opcionales). No incluye `ideaId`, `contactoId`, `guionId`
+        ni `score`. Cambiar `respuestas` re-dispara el scoring.
+      properties:
+        respuestas:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RespuestaEntrevista'
+        citas:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrearCitaRequest'
+    AjustarScoreRequest:
+      type: object
+      description: Ajuste humano del score. Conserva el score del agente (RF-09c).
+      required: [scoreAjustado, nota]
+      properties:
+        scoreAjustado:
+          type: number
+          minimum: 0
+          maximum: 10
+        nota:
+          type: string
+          minLength: 1
+    EntrevistasPaginadas:
+      description: Página de entrevistas (sobre `RespuestaPaginada` con `datos` de `Entrevista`).
+      allOf:
+        - $ref: '#/components/schemas/RespuestaPaginada'
+        - type: object
+          properties:
+            datos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Entrevista'
+
+    # --- KPIs, tablero y alertas (épica E5) ---
+
+    ZonaKpi:
+      type: string
+      description: |
+        Zona de semáforo de un KPI según su valor frente a los umbrales de la idea.
+        `sin_datos` cuando no hay evidencia suficiente (valor `null`).
+      enum:
+        - go           # valor en zona de avance (≥ umbralGo)
+        - observacion  # zona intermedia, entre kill y go
+        - kill         # valor en zona de descarte (< umbralKill)
+        - sin_datos    # sin evidencia suficiente para calcular el KPI
+    KpiCalculado:
+      type: object
+      description: |
+        Valor de un KPI calculado a partir de las entrevistas de la idea, con sus umbrales vigentes y
+        su zona de semáforo. Autocontenido: trae los umbrales para pintar el semáforo sin otra llamada.
+      required: [kpi, grupo, unidad, valor, umbralGo, umbralKill, zona]
+      properties:
+        kpi:
+          $ref: '#/components/schemas/Kpi'
+        grupo:
+          allOf:
+            - $ref: '#/components/schemas/KpiGrupo'
+          readOnly: true
+        unidad:
+          allOf:
+            - $ref: '#/components/schemas/UnidadKpi'
+          readOnly: true
+        valor:
+          type: number
+          nullable: true
+          description: Valor calculado del KPI; `null` cuando no hay evidencia suficiente (denominador cero).
+        numerador:
+          type: number
+          nullable: true
+          description: Numerador de la fórmula, para transparencia; `null` en KPIs de conteo.
+        denominador:
+          type: number
+          nullable: true
+          description: Denominador de la fórmula, para transparencia; `null` en KPIs de conteo.
+        umbralGo:
+          type: number
+          description: Umbral GO vigente de la idea para este KPI.
+        umbralKill:
+          type: number
+          nullable: true
+          description: Umbral KILL vigente; `null` en los KPIs sin zona kill.
+        zona:
+          $ref: '#/components/schemas/ZonaKpi'
+    ResumenTablero:
+      type: object
+      description: Conteo de KPIs por zona de semáforo, para una lectura global del tablero.
+      required: [enZonaGo, enObservacion, enZonaKill, sinDatos, totalKpis]
+      properties:
+        enZonaGo:
+          type: integer
+        enObservacion:
+          type: integer
+        enZonaKill:
+          type: integer
+        sinDatos:
+          type: integer
+        totalKpis:
+          type: integer
+    TableroIdea:
+      type: object
+      description: Tablero de decisión de una idea con sus KPIs calculados y su semáforo (RF-12, HU-16).
+      required: [ideaId, fechaCalculo, resumen, kpis]
+      properties:
+        ideaId:
+          type: string
+          format: uuid
+          readOnly: true
+        fechaCalculo:
+          type: string
+          format: date-time
+          description: Momento del cálculo del tablero.
+        resumen:
+          $ref: '#/components/schemas/ResumenTablero'
+        kpis:
+          type: array
+          description: Un `KpiCalculado` por cada KPI del catálogo de la sección 7.
+          items:
+            $ref: '#/components/schemas/KpiCalculado'
+    TipoAlerta:
+      type: string
+      description: Tipo de cruce de umbral que disparó la alerta.
+      enum:
+        - go    # un KPI cruzó hacia zona go (oportunidad)
+        - kill  # un KPI cruzó hacia zona kill (riesgo)
+    AlertaKpi:
+      type: object
+      description: Alerta generada por el sistema cuando un KPI cruza su umbral kill o go (RF-13).
+      required: [id, ideaId, kpi, tipo, valor, umbral, fecha, leida]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ideaId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Idea a la que pertenece; derivado del path, nunca aceptado como entrada.
+        kpi:
+          $ref: '#/components/schemas/Kpi'
+        tipo:
+          $ref: '#/components/schemas/TipoAlerta'
+        valor:
+          type: number
+          description: Valor del KPI que disparó la alerta.
+        umbral:
+          type: number
+          description: Umbral cruzado (go o kill, según `tipo`).
+        fecha:
+          type: string
+          format: date-time
+        leida:
+          type: boolean
+    ActualizarAlertaRequest:
+      type: object
+      description: Marca una alerta como leída. Limitado al campo `leida`.
+      required: [leida]
+      properties:
+        leida:
+          type: boolean
+    AlertasPaginadas:
+      description: Página de alertas (sobre `RespuestaPaginada` con `datos` de `AlertaKpi`).
+      allOf:
+        - $ref: '#/components/schemas/RespuestaPaginada'
+        - type: object
+          properties:
+            datos:
+              type: array
+              items:
+                $ref: '#/components/schemas/AlertaKpi'
+
+    # --- Veredicto del Validador Inteligente (épica E6) ---
+
+    TipoVeredicto:
+      type: string
+      description: Juicio del agente sobre la idea.
+      enum:
+        - go
+        - pivote
+        - kill
+    EstadoVeredicto:
+      type: string
+      description: Estado de verificación humana del veredicto (modo consultivo).
+      enum:
+        - pendiente  # emitido por el agente, aún sin verificar
+        - aprobado   # el usuario lo hizo firme; la idea cambió de estado
+        - anulado    # el usuario lo descartó con una nota
+    JustificacionKpi:
+      type: object
+      description: Lectura del agente para un KPI y su peso en la conclusión (RF-15, HU-19).
+      required: [kpi, lectura]
+      properties:
+        kpi:
+          $ref: '#/components/schemas/Kpi'
+        lectura:
+          type: string
+          description: Cómo interpreta el agente este KPI y cómo influye en el veredicto.
+    VerificacionVeredicto:
+      type: object
+      readOnly: true
+      description: Verificación humana registrada sobre el veredicto.
+      required: [resultado, fecha]
+      properties:
+        resultado:
+          type: string
+          enum: [aprobado, anulado]
+        nota:
+          type: string
+          description: Motivo de la verificación; obligatoria al anular.
+        fecha:
+          type: string
+          format: date-time
+    Veredicto:
+      type: object
+      description: |
+        Veredicto razonado del Validador Inteligente sobre una idea, con su snapshot reproducible y su
+        verificación humana. El bloque del agente y el snapshot son de solo lectura (RNF-09, RNF-20).
+      required: [id, ideaId, veredicto, confianza, justificacionPorKPI, recomendaciones, proveedor, modelo, snapshotKpis, estadoVerificacion, fechaEmision]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ideaId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Idea a la que pertenece; derivado del path, nunca aceptado como entrada.
+        veredicto:
+          allOf:
+            - $ref: '#/components/schemas/TipoVeredicto'
+          readOnly: true
+        confianza:
+          type: number
+          minimum: 0
+          maximum: 100
+          readOnly: true
+          description: Nivel de confianza del agente (0–100); evidencia escasa produce confianza baja.
+        justificacionPorKPI:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/JustificacionKpi'
+        recomendaciones:
+          type: array
+          readOnly: true
+          description: Acciones sugeridas por el agente.
+          items:
+            type: string
+        proveedor:
+          type: string
+          readOnly: true
+          description: Proveedor de IA con que se emitió (snapshot, RNF-09).
+        modelo:
+          type: string
+          readOnly: true
+          description: Modelo concreto con que se emitió (snapshot, RNF-09).
+        snapshotKpis:
+          type: array
+          readOnly: true
+          description: KPIs (valores, umbrales y zona) sobre los que se emitió el veredicto, congelados.
+          items:
+            $ref: '#/components/schemas/KpiCalculado'
+        estadoVerificacion:
+          $ref: '#/components/schemas/EstadoVeredicto'
+        verificacion:
+          allOf:
+            - $ref: '#/components/schemas/VerificacionVeredicto'
+          nullable: true
+          description: Verificación humana; `null` mientras el veredicto está `pendiente`.
+        fechaEmision:
+          type: string
+          format: date-time
+    VerificarVeredictoRequest:
+      type: object
+      description: |
+        Verificación humana del veredicto. `aprobado` lo hace firme y cambia el estado de la idea;
+        `anulado` exige `nota` y no cambia el estado.
+      required: [resultado]
+      properties:
+        resultado:
+          type: string
+          enum: [aprobado, anulado]
+        nota:
+          type: string
+          minLength: 1
+          description: Motivo de la verificación; obligatoria cuando `resultado` es `anulado`.
+    VeredictosPaginados:
+      description: Página de veredictos (sobre `RespuestaPaginada` con `datos` de `Veredicto`).
+      allOf:
+        - $ref: '#/components/schemas/RespuestaPaginada'
+        - type: object
+          properties:
+            datos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Veredicto'
+
+    # --- Configuración del proveedor de IA (BYOK) (épica E7) ---
+
+    ProveedorId:
+      type: string
+      description: Proveedor de IA soportado. Un cuarto proveedor entraría por el adaptador común (RNF-06).
+      enum:
+        - anthropic
+        - openai
+        - google
+    ModeloIA:
+      type: object
+      description: |
+        Modelo idóneo para el análisis dentro de un proveedor. El `id` es un dato del catálogo curado
+        (cadena, p. ej. `claude-opus-4-8`), actualizable sin redesplegar (RNF-18); no es un enum.
+      required: [id, nombre]
+      properties:
+        id:
+          type: string
+          description: Identificador del modelo en el proveedor (cadena, no enum).
+        nombre:
+          type: string
+        descripcion:
+          type: string
+    ProveedorIA:
+      type: object
+      description: Proveedor soportado con su lista curada de modelos idóneos.
+      required: [id, nombre, modelos]
+      properties:
+        id:
+          $ref: '#/components/schemas/ProveedorId'
+        nombre:
+          type: string
+        modelos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModeloIA'
+    ConfiguracionByok:
+      type: object
+      description: |
+        Configuración BYOK del usuario. NUNCA incluye la API key (RNF-07): solo `apiKeyRegistrada`
+        indica su presencia. Lleva dos modelos por tarea: económico para scoring, potente para veredicto.
+      required: [proveedor, modeloScoring, modeloVeredicto, apiKeyRegistrada, fechaActualizacion]
+      properties:
+        proveedor:
+          $ref: '#/components/schemas/ProveedorId'
+        modeloScoring:
+          type: string
+          description: Modelo (económico) usado para el scoring de entrevistas (E4).
+        modeloVeredicto:
+          type: string
+          description: Modelo (potente) usado para el veredicto de idea (E6).
+        apiKeyRegistrada:
+          type: boolean
+          description: Indica que hay una API key cifrada registrada, sin revelarla.
+        fechaActualizacion:
+          type: string
+          format: date-time
+    GuardarByokRequest:
+      type: object
+      description: |
+        Crea o reemplaza la configuración BYOK. La `apiKey` es write-only: se acepta aquí pero nunca se
+        devuelve (RNF-07). `modeloScoring`/`modeloVeredicto` deben pertenecer al catálogo del `proveedor`.
+      required: [proveedor, apiKey, modeloScoring, modeloVeredicto]
+      properties:
+        proveedor:
+          $ref: '#/components/schemas/ProveedorId'
+        apiKey:
+          type: string
+          writeOnly: true
+          minLength: 1
+          description: API key del proveedor (BYOK). Se cifra en reposo y nunca se devuelve.
+        modeloScoring:
+          type: string
+        modeloVeredicto:
+          type: string
+
+    # --- Optimización y visibilidad de costo (épica E8) ---
+
+    Moneda:
+      type: string
+      description: |
+        Moneda del costo estimado y de la tabla de precios. Los proveedores de IA facturan la inferencia
+        en dólares; un enum estable basta y evita ambigüedad. Datos como las tarifas son configurables.
+      enum:
+        - USD
+    DesgloseCostoTarea:
+      type: object
+      description: Costo estimado del consumo de IA de una idea, desglosado por tarea del agente.
+      required: [tarea, llamadas, tokensEntrada, tokensSalida, costoEstimado]
+      properties:
+        tarea:
+          type: string
+          description: Tarea del agente que consumió IA.
+          enum:
+            - scoring    # scoring de entrevistas (alto volumen, E4)
+            - veredicto  # veredicto de idea (baja frecuencia, E6)
+        llamadas:
+          type: integer
+          minimum: 0
+          description: Número de llamadas al agente para esta tarea.
+        tokensEntrada:
+          type: integer
+          minimum: 0
+        tokensSalida:
+          type: integer
+          minimum: 0
+        costoEstimado:
+          type: number
+          minimum: 0
+          description: Costo estimado acumulado de esta tarea (tokens × tabla de precios).
+    CostoIdea:
+      type: object
+      readOnly: true
+      description: |
+        Costo estimado acumulado del consumo de IA de una idea (RF-22f, HU-29). Es un estimado calculado
+        localmente del consumo vía ValidaLab —NO el saldo de la cuenta del proveedor (RNF-17)—; para
+        recargar, `urlFacturacion` enlaza al panel de facturación del proveedor (RF-22g).
+      required: [ideaId, moneda, costoEstimadoTotal, desglosePorTarea, tokensEntrada, tokensSalida, llamadas, esEstimado, aclaracion, fechaCalculo]
+      properties:
+        ideaId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: Idea a la que pertenece; derivado del path, nunca aceptado como entrada.
+        proveedor:
+          allOf:
+            - $ref: '#/components/schemas/ProveedorId'
+          nullable: true
+          description: Proveedor con el que se generó el consumo; `null` si aún no hay consumo o BYOK.
+        moneda:
+          $ref: '#/components/schemas/Moneda'
+        costoEstimadoTotal:
+          type: number
+          minimum: 0
+          description: Suma del costo estimado de todas las tareas de la idea.
+        desglosePorTarea:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesgloseCostoTarea'
+        tokensEntrada:
+          type: integer
+          minimum: 0
+        tokensSalida:
+          type: integer
+          minimum: 0
+        llamadas:
+          type: integer
+          minimum: 0
+        esEstimado:
+          type: boolean
+          description: Siempre `true`; recalca que es un estimado del consumo vía ValidaLab, no el saldo.
+        aclaracion:
+          type: string
+          description: |
+            Texto normativo (SRS §8.9.1): es un estimado calculado localmente del consumo vía ValidaLab,
+            no el saldo de la cuenta; el saldo solo es visible en el panel del proveedor.
+        urlFacturacion:
+          type: string
+          format: uri
+          nullable: true
+          description: Enlace al panel de facturación del proveedor para recargar saldo (RF-22g, HU-31).
+        fechaCalculo:
+          type: string
+          format: date-time
+    CostoIdeaResumen:
+      type: object
+      readOnly: true
+      description: Costo estimado de una idea, para el desglose del costo total del usuario.
+      required: [ideaId, titulo, costoEstimado]
+      properties:
+        ideaId:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+          description: Título de la idea, para identificarla en el desglose.
+        costoEstimado:
+          type: number
+          minimum: 0
+    CostoUsuario:
+      type: object
+      readOnly: true
+      description: |
+        Costo estimado acumulado total del usuario autenticado, agregado sobre todas sus ideas
+        (RF-22f, HU-29). Mismo carácter que `CostoIdea`: estimado del consumo vía ValidaLab, no el saldo.
+      required: [moneda, costoEstimadoTotal, costoPorIdea, tokensEntrada, tokensSalida, esEstimado, aclaracion, fechaCalculo]
+      properties:
+        moneda:
+          $ref: '#/components/schemas/Moneda'
+        costoEstimadoTotal:
+          type: number
+          minimum: 0
+          description: Suma del costo estimado de todas las ideas del usuario.
+        costoPorIdea:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostoIdeaResumen'
+        proveedor:
+          allOf:
+            - $ref: '#/components/schemas/ProveedorId'
+          nullable: true
+          description: Proveedor BYOK configurado; `null` si aún no hay configuración.
+        tokensEntrada:
+          type: integer
+          minimum: 0
+        tokensSalida:
+          type: integer
+          minimum: 0
+        esEstimado:
+          type: boolean
+          description: Siempre `true`; es un estimado del consumo vía ValidaLab, no el saldo.
+        aclaracion:
+          type: string
+          description: Texto normativo (SRS §8.9.1); ver `CostoIdea.aclaracion`.
+        urlFacturacion:
+          type: string
+          format: uri
+          nullable: true
+          description: Enlace al panel de facturación del proveedor para recargar saldo (RF-22g, HU-31).
+        fechaCalculo:
+          type: string
+          format: date-time
+    PrecioModelo:
+      type: object
+      description: |
+        Tarifa de un modelo en la tabla de precios (RF-22e). Los precios son datos configurables y
+        actualizables sin redesplegar (RNF-18), no valores cableados en el contrato.
+      required: [proveedor, modeloId, precioEntradaPorMillon, precioSalidaPorMillon, moneda]
+      properties:
+        proveedor:
+          $ref: '#/components/schemas/ProveedorId'
+        modeloId:
+          type: string
+          description: Id del modelo (cadena del catálogo curado, igual que `ModeloIA.id`).
+        precioEntradaPorMillon:
+          type: number
+          minimum: 0
+          description: Precio por millón de tokens de entrada.
+        precioSalidaPorMillon:
+          type: number
+          minimum: 0
+          description: Precio por millón de tokens de salida.
+        precioEntradaCacheadaPorMillon:
+          type: number
+          minimum: 0
+          nullable: true
+          description: |
+            Precio por millón de tokens de entrada cacheada, cuando el proveedor ofrece prompt caching
+            (RF-22d); `null` si no aplica.
+        moneda:
+          $ref: '#/components/schemas/Moneda'
+        vigenteDesde:
+          type: string
+          format: date-time
+          description: Desde cuándo rige esta tarifa.
+    EstimacionReevaluacion:
+      type: object
+      readOnly: true
+      description: |
+        Costo estimado de re-evaluar en lote las entrevistas de una idea tras un cambio de rúbrica
+        (RF-22h, HU-32), calculado SIN ejecutar. Es un estimado del consumo vía ValidaLab (RNF-17).
+      required: [entrevistasAfectadas, moneda, costoEstimado, tokensEntradaEstimados, tokensSalidaEstimados, esEstimado, aclaracion]
+      properties:
+        entrevistasAfectadas:
+          type: integer
+          minimum: 0
+          description: Entrevistas cuya entrada cambió y que serían re-puntuadas.
+        modeloScoring:
+          type: string
+          nullable: true
+          description: Modelo de scoring configurado con que se haría la re-evaluación; `null` si no hay BYOK.
+        moneda:
+          $ref: '#/components/schemas/Moneda'
+        costoEstimado:
+          type: number
+          minimum: 0
+        tokensEntradaEstimados:
+          type: integer
+          minimum: 0
+        tokensSalidaEstimados:
+          type: integer
+          minimum: 0
+        esEstimado:
+          type: boolean
+          description: Siempre `true`; es un estimado previo a la ejecución, no el saldo.
+        aclaracion:
+          type: string
+          description: Aclaración de que es un estimado del consumo vía ValidaLab, no el saldo.
+    ReevaluacionLoteRequest:
+      type: object
+      description: |
+        Solicitud de re-evaluación en lote. `idsEntrevistas` es opcional: por defecto se re-evalúan las
+        entrevistas de la idea cuya entrada cambió (distinto `hashEntrada`); un subconjunto va explícito.
+      properties:
+        idsEntrevistas:
+          type: array
+          description: Entrevistas concretas a re-evaluar; si se omite, todas las afectadas por el cambio.
+          items:
+            type: string
+            format: uuid
+    ResultadoReevaluacion:
+      type: object
+      readOnly: true
+      description: Resultado de ejecutar una re-evaluación en lote (RF-22h, HU-32).
+      required: [entrevistasReevaluadas, entrevistasOmitidas, moneda, costoEstimado, tokensEntrada, tokensSalida]
+      properties:
+        entrevistasReevaluadas:
+          type: integer
+          minimum: 0
+          description: Entrevistas que se volvieron a puntuar.
+        entrevistasOmitidas:
+          type: integer
+          minimum: 0
+          description: Entrevistas sin cambios omitidas por idempotencia (RF-22c).
+        moneda:
+          $ref: '#/components/schemas/Moneda'
+        costoEstimado:
+          type: number
+          minimum: 0
+          description: Costo estimado real del lote ejecutado (consumo vía ValidaLab, no el saldo).
+        tokensEntrada:
+          type: integer
+          minimum: 0
+        tokensSalida:
+          type: integer
+          minimum: 0
+
+  responses:
+    NoAutenticado:
+      description: Falta el token o es inválido/expirado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    AccesoDenegado:
+      description: El recurso pertenece a otro `owner_id` (regla de aislamiento multi-tenant).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NoEncontrado:
+      description: El recurso no existe o no es visible para el usuario autenticado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidacionFallida:
+      description: El payload no cumple las reglas de validación.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflicto:
+      description: Conflicto de estado (p. ej. un `email` ya registrado).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    SalidaAgenteInvalida:
+      description: La salida del agente no cumplió su esquema tras reintentos (`SALIDA_AGENTE_INVALIDA`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ProveedorNoDisponible:
+      description: El proveedor de IA elegido no respondió (`PROVEEDOR_IA_NO_DISPONIBLE`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ApiKeyInvalida:
+      description: |
+        Validación de la configuración BYOK fallida (`422`). El `codigo` es `API_KEY_INVALIDA` cuando la
+        API key no validó contra el proveedor (RF-20), o `VALIDACION_FALLIDA` cuando un modelo no
+        pertenece al catálogo del proveedor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
