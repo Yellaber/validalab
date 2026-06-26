@@ -2,7 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-This file covers the **backend** package. The companion doc `../CLAUDE.md` (repo root) is the source of truth for *what* to build: the ValidaLab domain model, the Validador Inteligente agent, BYOK, KPIs, and the SRS-driven feature epics. Read it alongside this file.
+This file covers the **backend** package. Two companion docs are the sources of truth and should be read alongside it:
+
+- `../CLAUDE.md` (repo root) — *what* to build: the ValidaLab domain model, the Validador Inteligente agent, BYOK, KPIs, and the SRS-driven feature epics. It also indexes the API contract.
+- `../contrato-api/openapi.yaml` — the **single API contract** and the source of truth for the frontend↔backend interface. Implement and modify every endpoint to match this document; define any change here **first**, then implement it. Do **not** couple the implementation to `frontend/`. The cross-cutting conventions (auth, `owner_id` isolation, error envelope, pagination, naming) are summarized in the root `CLAUDE.md` and detailed in the contract.
 
 ## Commands
 

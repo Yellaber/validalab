@@ -28,8 +28,6 @@ Principio de diseño central — **la tríada de responsabilidades**:
 - **El agente ejecuta** (puntúa entrevistas y dictamina el veredicto).
 - **El sistema calcula** (KPIs) **y orquesta** (la invocación al agente).
 
-> Talia (un ATS para LATAM) es solo el primer caso de uso que se cargará como dato; **no** es funcionalidad de ValidaLab.
-
 ## Stack tecnológico previsto (RNF-03)
 
 - **Frontend:** Angular
@@ -38,6 +36,28 @@ Principio de diseño central — **la tríada de responsabilidades**:
 - **Capa agéntica:** LangGraph.js + `@langchain/core`, TypeScript, esquemas **Zod** para tools y salida estructurada
 
 El proyecto es **multi-tenant desde la primera versión**: autenticación, RBAC y aislamiento por `owner_id` filtrado en cada consulta. Ningún usuario ve datos de otro.
+
+## Contrato de API (fuente de verdad frontend ↔ backend)
+
+El contrato de API es la **fuente de verdad única** que dirige el desarrollo de `frontend/` y `backend/`. Cada equipo desarrolla contra el contrato **sin conocer ni depender del código del otro**. Todo endpoint, payload o comportamiento de borde entre cliente y servidor se define **primero en el contrato** y solo después se implementa.
+
+**Índice — el contrato es un único documento OpenAPI:**
+
+```
+contrato-api/openapi.yaml   ← contrato completo (un solo archivo, navegable por `tags` de dominio)
+```
+
+Los `tags` del documento corresponden a los módulos de dominio: `usuarios`, `ideas`, `contactos`, `entrevistas`, `kpis`, `agente`, `proveedores`.
+
+**Regla anti-crecimiento de esta memoria:** aquí va **solo** el índice (arriba) y el **resumen normativo** de las convenciones transversales (abajo). El detalle voluminoso —endpoint por endpoint, esquemas concretos y el **catálogo completo de códigos de error**— vive en `contrato-api/openapi.yaml`, **no** en este archivo. Así `CLAUDE.md` se mantiene acotado y estable aunque el contrato crezca; la consulta sigue siendo **integral** porque desde este índice se alcanza todo el detalle.
+
+**Convenciones transversales (resumen normativo; el detalle está en el OpenAPI):**
+
+- **Autenticación:** JWT en `Authorization: Bearer <token>` en toda operación salvo registro/login. Sin token válido → `401 NO_AUTENTICADO`.
+- **Aislamiento multi-tenant (`owner_id`):** el `owner_id` se deriva **siempre** del token, nunca se acepta como entrada del cliente; cada consulta filtra por él. Pedir un recurso ajeno → `403 ACCESO_DENEGADO` sin revelar datos.
+- **Formato de error:** todo error usa el sobre `Error` con un `codigo` estable del catálogo `CodigoError` (catálogo completo en el OpenAPI).
+- **Paginación:** colecciones con parámetros `pagina` y `porPagina`; respuesta en el sobre `RespuestaPaginada` con bloque `paginacion`.
+- **Nombres:** rutas en plural y kebab-case (`/ideas`, `/entrevistas`); campos JSON en camelCase y en español (terminología del SRS); `id` en formato `uuid`.
 
 ## Modelo de dominio
 

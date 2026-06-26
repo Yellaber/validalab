@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This file covers the **frontend** package. Two companion docs apply and should be read alongside it:
 
-- `../CLAUDE.md` (repo root) — the ValidaLab domain model, the Validador Inteligente agent, BYOK, KPIs, and the SRS-driven feature epics. This is the source of truth for *what* to build.
+- `../CLAUDE.md` (repo root) — the ValidaLab domain model, the Validador Inteligente agent, BYOK, KPIs, and the SRS-driven feature epics. This is the source of truth for *what* to build, and it indexes the API contract.
+- `../contrato-api/openapi.yaml` — the **single API contract** and the source of truth for the frontend↔backend interface. Build every HTTP call against this document; do **not** inspect or import `backend/` code to learn request/response/error shapes. The cross-cutting conventions (auth, `owner_id` isolation, error envelope, pagination, naming) are summarized in the root `CLAUDE.md` and detailed here.
 - `.claude/CLAUDE.md` — Angular/TypeScript coding conventions (standalone components, signals, `input()`/`output()`, native control flow, `inject()`, OnPush, reactive forms). These are binding style rules; do not restate them in code review, just follow them.
 
 ## Commands
