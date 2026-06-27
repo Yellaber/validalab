@@ -23,7 +23,7 @@ tmp/
 out-tsc/
 build/
 bazel-out/
-/.angular/cache
+**/.angular/cache/
 *.tsbuildinfo
 
 # ------------------------------------------------------------------------------
