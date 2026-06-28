@@ -203,7 +203,7 @@ Prioridades de implementación (MoSCoW); los **Must** constituyen el MVP:
 - **SRS v6.0** — especificación de requerimientos (fuente de verdad funcional).
 
 El dominio, la documentación y los identificadores funcionales están en **español** (idea,
-hipótesis, entrevista, veredicto, umbral, score), siguiendo la terminología del SRS.
+hipotesis, entrevista, veredicto, umbral, score), siguiendo la terminología del SRS.
 
 ---
 
