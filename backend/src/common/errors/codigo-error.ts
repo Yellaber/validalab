@@ -35,7 +35,9 @@ export interface SobreError {
  * usa para responder con el par (código, estado) correcto.
  */
 export const ESTADO_HTTP_POR_CODIGO: Record<CodigoError, number> = {
-  [CodigoError.VALIDACION_FALLIDA]: 400,
+  // El contrato usa 422 para VALIDACION_FALLIDA en todos sus endpoints
+  // (Unprocessable Entity); el comentario "400" del catálogo es erróneo.
+  [CodigoError.VALIDACION_FALLIDA]: 422,
   [CodigoError.NO_AUTENTICADO]: 401,
   [CodigoError.ACCESO_DENEGADO]: 403,
   [CodigoError.RECURSO_NO_ENCONTRADO]: 404,
