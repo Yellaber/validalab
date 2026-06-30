@@ -43,11 +43,18 @@ export class AppConfigService {
     };
   }
 
-  /** Secreto y TTL para verificar el `accessToken`. */
+  /** Secreto y TTL para firmar y verificar el `accessToken`. */
   get jwt(): { accessSecret: string; accessTtl: string } {
     return {
       accessSecret: this.config.get('JWT_ACCESS_SECRET', { infer: true }),
       accessTtl: this.config.get('JWT_ACCESS_TTL', { infer: true }),
+    };
+  }
+
+  /** Configuración de la sesión (refresh token opaco). */
+  get session(): { refreshTokenTtl: string } {
+    return {
+      refreshTokenTtl: this.config.get('REFRESH_TOKEN_TTL', { infer: true }),
     };
   }
 }

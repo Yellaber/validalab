@@ -29,9 +29,14 @@ export const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
 
-  // --- JWT (verificación del accessToken) ---
+  // --- JWT (firma y verificación del accessToken) ---
   JWT_ACCESS_SECRET: z.string().min(1),
   JWT_ACCESS_TTL: z.string().min(1).default('15m'),
+
+  // --- Sesión / refresh token ---
+  // Vigencia del refresh token opaco (se almacena hasheado). Formato de `ms`
+  // (p. ej. 30d, 12h).
+  REFRESH_TOKEN_TTL: z.string().min(1).default('30d'),
 });
 
 /** Configuración del entorno ya validada y con tipos derivados. */

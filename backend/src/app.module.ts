@@ -4,12 +4,11 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
 import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
 
 @Module({
-  imports: [AppConfigModule, DatabaseModule, AuthModule],
-  // Sin controladores de dominio todavía: los aportan los módulos `usuarios`,
-  // `ideas`, etc. La fundación E0 solo provee plomería transversal.
+  imports: [AppConfigModule, DatabaseModule, AuthModule, UsuariosModule],
   controllers: [],
   providers: [
     // Filtro global: normaliza toda excepción al sobre `Error` del contrato.
