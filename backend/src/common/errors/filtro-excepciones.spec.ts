@@ -63,7 +63,7 @@ describe('FiltroDeExcepciones', () => {
       host,
     );
 
-    expect(captura.estado).toBe(400);
+    expect(captura.estado).toBe(422);
     expect(captura.cuerpo?.codigo).toBe(CodigoError.VALIDACION_FALLIDA);
     expect(captura.cuerpo?.detalles).toEqual(detalles);
   });
@@ -76,7 +76,7 @@ describe('FiltroDeExcepciones', () => {
 
     filtro.catch(new ZodValidationException(zodError), host);
 
-    expect(captura.estado).toBe(400);
+    expect(captura.estado).toBe(422);
     expect(captura.cuerpo?.codigo).toBe(CodigoError.VALIDACION_FALLIDA);
     const campos = captura.cuerpo?.detalles?.map((d) => d.campo) ?? [];
     expect(campos).toEqual(expect.arrayContaining(['nombre', 'edad']));
