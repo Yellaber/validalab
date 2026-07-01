@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import { Rol } from './claims';
+import { Rol } from '../claims';
 
 /** Clave de metadatos con los roles permitidos para un handler/controlador. */
 export const ROLES_KEY = 'roles_requeridos';

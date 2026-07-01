@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { UsuarioAutenticado } from './claims';
+import { UsuarioAutenticado } from '../claims';
 
 /**
  * Extrae el usuario autenticado que el `JwtAuthGuard` adjuntó al request. Se

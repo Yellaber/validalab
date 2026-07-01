@@ -3,9 +3,9 @@ import { Reflector } from '@nestjs/core';
 import {
   AccesoDenegadoException,
   NoAutenticadoException,
-} from '../common/errors/dominio.exception';
-import { Rol, UsuarioAutenticado } from './claims';
-import { ROLES_KEY } from './roles.decorator';
+} from '../../common/errors/dominio.exception';
+import { Rol, UsuarioAutenticado } from '../claims';
+import { ROLES_KEY } from '../decorators/roles.decorator';
 
 interface RequestConUsuario {
   usuario?: UsuarioAutenticado;

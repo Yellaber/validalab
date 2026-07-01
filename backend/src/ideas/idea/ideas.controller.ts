@@ -21,7 +21,7 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { OwnerId } from '../../auth/usuario-actual.decorator';
+import { OwnerId } from '../../auth/decorators/usuario-actual.decorator';
 import { ErrorRespuestaDto } from '../../common/errors/error-respuesta.dto';
 import { RespuestaPaginada } from '../../common/pagination/respuesta-paginada';
 import {

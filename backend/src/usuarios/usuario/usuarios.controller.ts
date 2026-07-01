@@ -22,9 +22,9 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { Publico } from '../../auth/publico.decorator';
-import { Roles } from '../../auth/roles.decorator';
-import { OwnerId } from '../../auth/usuario-actual.decorator';
+import { Publico } from '../../auth/decorators/publico.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { OwnerId } from '../../auth/decorators/usuario-actual.decorator';
 import { ErrorRespuestaDto } from '../../common/errors/error-respuesta.dto';
 import { PaginacionQueryDto } from '../../common/pagination/paginacion.dto';
 import { RespuestaPaginada } from '../../common/pagination/respuesta-paginada';

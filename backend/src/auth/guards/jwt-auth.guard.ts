@@ -1,9 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { NoAutenticadoException } from '../common/errors/dominio.exception';
-import { claimsSchema, UsuarioAutenticado } from './claims';
-import { PUBLICO_KEY } from './publico.decorator';
+import { NoAutenticadoException } from '../../common/errors/dominio.exception';
+import { claimsSchema, UsuarioAutenticado } from '../claims';
+import { PUBLICO_KEY } from '../decorators/publico.decorator';
 
 interface RequestConUsuario {
   headers?: Record<string, unknown>;

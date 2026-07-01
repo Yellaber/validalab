@@ -1,14 +1,14 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { CodigoError } from '../common/errors/codigo-error';
-import { NoAutenticadoException } from '../common/errors/dominio.exception';
-import { UsuarioAutenticado } from './claims';
+import { CodigoError } from '../../common/errors/codigo-error';
+import { NoAutenticadoException } from '../../common/errors/dominio.exception';
+import { UsuarioAutenticado } from '../claims';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import {
   obtenerOwnerId,
   obtenerUsuarioActual,
-} from './usuario-actual.decorator';
+} from '../decorators/usuario-actual.decorator';
 
 const OWNER_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
 
