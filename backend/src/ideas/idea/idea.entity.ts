@@ -8,7 +8,7 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Usuario } from '../usuarios/usuario.entity';
+import { Usuario } from '../../usuarios/usuario.entity';
 import type { EstadoIdea } from './idea.types';
 
 /**

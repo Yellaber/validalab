@@ -3,7 +3,7 @@ import {
   AccesoDenegadoException,
   ConflictoException,
   RecursoNoEncontradoException,
-} from '../common/errors/dominio.exception';
+} from '../../common/errors/dominio.exception';
 import { Idea } from './idea.entity';
 import { IdeasService } from './ideas.service';
 import { CrearIdeaDto, ListarIdeasQuery } from './ideas.dto';

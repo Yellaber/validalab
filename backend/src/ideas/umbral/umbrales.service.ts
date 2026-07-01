@@ -4,12 +4,12 @@ import { Repository } from 'typeorm';
 import {
   RecursoNoEncontradoException,
   ValidacionFallidaException,
-} from '../common/errors/dominio.exception';
+} from '../../common/errors/dominio.exception';
 import { esKpiValido, Kpi, KPIS } from './kpi.catalog';
 import { aUmbralDto, UmbralRespuesta } from './umbral-respuesta';
 import { UmbralIdea } from './umbral.entity';
 import { ActualizarUmbralDto } from './umbrales.dto';
-import { IdeasService } from './ideas.service';
+import { IdeasService } from '../idea/ideas.service';
 
 @Injectable()
 export class UmbralesService {

@@ -2,10 +2,10 @@ import { Repository } from 'typeorm';
 import {
   AccesoDenegadoException,
   RecursoNoEncontradoException,
-} from '../common/errors/dominio.exception';
+} from '../../common/errors/dominio.exception';
 import { Hipotesis } from './hipotesis.entity';
 import { HipotesisService } from './hipotesis.service';
-import { IdeasService } from './ideas.service';
+import { IdeasService } from '../idea/ideas.service';
 import { CrearHipotesisDto } from './hipotesis.dto';
 
 type RepoMock = {

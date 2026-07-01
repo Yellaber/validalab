@@ -5,11 +5,11 @@ import {
   AccesoDenegadoException,
   ConflictoException,
   RecursoNoEncontradoException,
-} from '../common/errors/dominio.exception';
+} from '../../common/errors/dominio.exception';
 import {
   crearRespuestaPaginada,
   RespuestaPaginada,
-} from '../common/pagination/respuesta-paginada';
+} from '../../common/pagination/respuesta-paginada';
 import { Idea } from './idea.entity';
 import { aIdeaDto, IdeaRespuesta } from './idea-respuesta';
 import { ActualizarIdeaDto, CrearIdeaDto, ListarIdeasQuery } from './ideas.dto';
