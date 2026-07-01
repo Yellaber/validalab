@@ -27,7 +27,9 @@ export class UmbralesService {
   async listar(ownerId: string, ideaId: string): Promise<UmbralRespuesta[]> {
     await this.ideas.asegurarPropia(ownerId, ideaId);
     const overrides = await this.umbrales.find({ where: { ideaId } });
-    const porKpi = new Map(overrides.map((override) => [override.kpi, override]));
+    const porKpi = new Map(
+      overrides.map((override) => [override.kpi, override]),
+    );
     return KPIS.map((kpi) => aUmbralDto(kpi, porKpi.get(kpi)));
   }
 
