@@ -21,8 +21,8 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { OwnerId } from '../auth/usuario-actual.decorator';
-import { ErrorRespuestaDto } from '../common/errors/error-respuesta.dto';
+import { OwnerId } from '../../auth/usuario-actual.decorator';
+import { ErrorRespuestaDto } from '../../common/errors/error-respuesta.dto';
 import {
   HipotesisListaDto,
   HipotesisRespuesta,
@@ -34,7 +34,7 @@ import {
   CrearHipotesisDto,
   IdHipotesisParamDto,
 } from './hipotesis.dto';
-import { IdIdeaParamDto } from './ideas.dto';
+import { IdIdeaParamDto } from '../idea/ideas.dto';
 
 @ApiTags('ideas')
 @ApiBearerAuth('bearerAuth')

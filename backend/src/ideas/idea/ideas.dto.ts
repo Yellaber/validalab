@@ -1,6 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
-import { paginacionQuerySchema } from '../common/pagination/paginacion.dto';
+import { paginacionQuerySchema } from '../../common/pagination/paginacion.dto';
 import { estadoIdeaSchema } from './idea.types';
 
 /**

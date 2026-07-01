@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RecursoNoEncontradoException } from '../common/errors/dominio.exception';
+import { RecursoNoEncontradoException } from '../../common/errors/dominio.exception';
 import { Hipotesis } from './hipotesis.entity';
 import { aHipotesisDto, HipotesisRespuesta } from './hipotesis-respuesta';
 import { ActualizarHipotesisDto, CrearHipotesisDto } from './hipotesis.dto';
-import { IdeasService } from './ideas.service';
+import { IdeasService } from '../idea/ideas.service';
 
 @Injectable()
 export class HipotesisService {

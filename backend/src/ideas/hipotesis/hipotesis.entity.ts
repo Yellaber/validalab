@@ -8,7 +8,7 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Idea } from './idea.entity';
+import { Idea } from '../idea/idea.entity';
 import type { EstadoHipotesis, TipoHipotesis } from './hipotesis.types';
 
 /**

@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Hipotesis } from './hipotesis.entity';
-import { HipotesisController } from './hipotesis.controller';
-import { HipotesisService } from './hipotesis.service';
-import { Idea } from './idea.entity';
-import { IdeasController } from './ideas.controller';
-import { IdeasService } from './ideas.service';
-import { UmbralIdea } from './umbral.entity';
-import { UmbralesController } from './umbrales.controller';
-import { UmbralesService } from './umbrales.service';
+import { Hipotesis } from './hipotesis/hipotesis.entity';
+import { HipotesisController } from './hipotesis/hipotesis.controller';
+import { HipotesisService } from './hipotesis/hipotesis.service';
+import { Idea } from './idea/idea.entity';
+import { IdeasController } from './idea/ideas.controller';
+import { IdeasService } from './idea/ideas.service';
+import { UmbralIdea } from './umbral/umbral.entity';
+import { UmbralesController } from './umbral/umbrales.controller';
+import { UmbralesService } from './umbral/umbrales.service';
 
 /**
  * Módulo de dominio `ideas` (épicas E1–E2): portafolio de ideas propias con su

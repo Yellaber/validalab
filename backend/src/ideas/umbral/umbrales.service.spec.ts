@@ -3,11 +3,11 @@ import {
   AccesoDenegadoException,
   RecursoNoEncontradoException,
   ValidacionFallidaException,
-} from '../common/errors/dominio.exception';
+} from '../../common/errors/dominio.exception';
 import { CATALOGO_KPI, KPIS } from './kpi.catalog';
 import { UmbralIdea } from './umbral.entity';
 import { UmbralesService } from './umbrales.service';
-import { IdeasService } from './ideas.service';
+import { IdeasService } from '../idea/ideas.service';
 import { ActualizarUmbralDto } from './umbrales.dto';
 
 type RepoMock = {
