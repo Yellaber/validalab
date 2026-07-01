@@ -3,12 +3,14 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { AppConfigService } from '../config/app-config.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
 
 /**
  * Módulo de autenticación. Configura el `JwtModule` para FIRMAR y VERIFICAR el
- * `accessToken` con el secreto y TTL de la configuración, y registra el
- * `JwtAuthGuard` como guard global (`APP_GUARD`), de modo que toda ruta exige
- * token salvo las marcadas con `@Publico()`.
+ * `accessToken` con el secreto y TTL de la configuración, y registra dos guards
+ * globales (`APP_GUARD`) en orden: primero el `JwtAuthGuard` (toda ruta exige
+ * token salvo las `@Publico()`), luego el `RolesGuard` (RBAC sobre `@Roles()`),
+ * que ya cuenta con la identidad adjuntada por el primero.
  */
 @Module({
   imports: [
@@ -24,7 +26,10 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       }),
     }),
   ],
-  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
   exports: [JwtModule],
 })
 export class AuthModule {}

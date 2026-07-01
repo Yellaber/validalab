@@ -4,7 +4,13 @@ import { QueryFailedError, Repository } from 'typeorm';
 import {
   ConflictoException,
   NoAutenticadoException,
+  RecursoNoEncontradoException,
 } from '../common/errors/dominio.exception';
+import {
+  crearRespuestaPaginada,
+  RespuestaPaginada,
+} from '../common/pagination/respuesta-paginada';
+import { PaginacionQuery } from '../common/pagination/paginacion.dto';
 import { ServicioDeHashing } from './hashing.service';
 import { ServicioDeTokens } from './token.service';
 import { Usuario } from './usuario.entity';
@@ -13,6 +19,7 @@ import {
   TokenRespuesta,
   UsuarioRespuesta,
 } from './usuario-respuesta';
+import { EstadoUsuario, Rol } from './usuario.types';
 import {
   ActualizarPerfilDto,
   LoginDto,
@@ -129,6 +136,54 @@ export class UsuariosService {
     const usuario = await this.buscarPropio(ownerId);
     usuario.nombre = datos.nombre;
     return aUsuarioDto(await this.usuarios.save(usuario));
+  }
+
+  // --- Administración (rol `administrador`) ---
+  // A diferencia del resto del backend, estas operaciones NO se filtran por
+  // `owner_id`: un administrador gestiona las cuentas de todos los usuarios. El
+  // aislamiento por tenant lo sustituye aquí el RBAC (`@Roles('administrador')`).
+
+  /** Lista todas las cuentas, paginadas y ordenadas por antigüedad (recientes primero). */
+  async listar(
+    query: PaginacionQuery,
+  ): Promise<RespuestaPaginada<UsuarioRespuesta>> {
+    const [usuarios, total] = await this.usuarios.findAndCount({
+      order: { fechaCreacion: 'DESC' },
+      skip: (query.pagina - 1) * query.porPagina,
+      take: query.porPagina,
+    });
+    return crearRespuestaPaginada(usuarios.map(aUsuarioDto), total, query);
+  }
+
+  /** Devuelve una cuenta cualquiera por su `id`. Inexistente → `RECURSO_NO_ENCONTRADO`. */
+  async obtenerPorId(id: string): Promise<UsuarioRespuesta> {
+    return aUsuarioDto(await this.buscarPorId(id));
+  }
+
+  /** Cambia el rol de una cuenta. Inexistente → `RECURSO_NO_ENCONTRADO`. */
+  async cambiarRol(id: string, rol: Rol): Promise<UsuarioRespuesta> {
+    const usuario = await this.buscarPorId(id);
+    usuario.rol = rol;
+    return aUsuarioDto(await this.usuarios.save(usuario));
+  }
+
+  /** Suspende o reactiva una cuenta. Inexistente → `RECURSO_NO_ENCONTRADO`. */
+  async cambiarEstado(
+    id: string,
+    estado: EstadoUsuario,
+  ): Promise<UsuarioRespuesta> {
+    const usuario = await this.buscarPorId(id);
+    usuario.estado = estado;
+    return aUsuarioDto(await this.usuarios.save(usuario));
+  }
+
+  /** Carga una cuenta por `id` (sin restricción de propietario), o falla 404. */
+  private async buscarPorId(id: string): Promise<Usuario> {
+    const usuario = await this.usuarios.findOne({ where: { id } });
+    if (!usuario) {
+      throw new RecursoNoEncontradoException('La cuenta solicitada no existe.');
+    }
+    return usuario;
   }
 
   /** Carga la cuenta propia por `owner_id` (derivado del token), o falla. */

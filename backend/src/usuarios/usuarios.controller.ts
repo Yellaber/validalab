@@ -4,14 +4,18 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -19,17 +23,24 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { Publico } from '../auth/publico.decorator';
+import { Roles } from '../auth/roles.decorator';
 import { OwnerId } from '../auth/usuario-actual.decorator';
 import { ErrorRespuestaDto } from '../common/errors/error-respuesta.dto';
+import { PaginacionQueryDto } from '../common/pagination/paginacion.dto';
+import { RespuestaPaginada } from '../common/pagination/respuesta-paginada';
 import {
   TokenRespuesta,
   TokenRespuestaDto,
   UsuarioRespuesta,
   UsuarioRespuestaDto,
+  UsuariosPaginadosDto,
 } from './usuario-respuesta';
 import { UsuariosService } from './usuarios.service';
 import {
   ActualizarPerfilDto,
+  CambiarEstadoDto,
+  CambiarRolDto,
+  IdUsuarioParamDto,
   LoginDto,
   RefrescarTokenDto,
   RegistroUsuarioDto,
@@ -166,5 +177,132 @@ export class UsuariosController {
     @Body() dto: ActualizarPerfilDto,
   ): Promise<UsuarioRespuesta> {
     return this.usuarios.actualizarPerfil(ownerId, dto);
+  }
+
+  // --- Administración de cuentas (solo rol `administrador`) ---
+
+  /** Lista todas las cuentas, paginadas. Solo administrador. */
+  @Get()
+  @Roles('administrador')
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({
+    summary: 'Listar cuentas (solo administrador)',
+    description:
+      'Requiere rol `administrador` (RBAC). Un `validador` recibe `403 ACCESO_DENEGADO`.',
+  })
+  @ApiOkResponse({
+    description: 'Página de cuentas.',
+    type: UsuariosPaginadosDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta un token de acceso válido.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'El rol no tiene privilegios de administración.',
+    type: ErrorRespuestaDto,
+  })
+  listar(
+    @Query() query: PaginacionQueryDto,
+  ): Promise<RespuestaPaginada<UsuarioRespuesta>> {
+    return this.usuarios.listar(query);
+  }
+
+  /** Consulta una cuenta por `id`. Solo administrador. */
+  @Get(':id')
+  @Roles('administrador')
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({
+    summary: 'Consultar una cuenta (solo administrador)',
+    description:
+      'Requiere rol `administrador` (RBAC). Un `validador` recibe `403 ACCESO_DENEGADO`.',
+  })
+  @ApiOkResponse({
+    description: 'Cuenta solicitada.',
+    type: UsuarioRespuestaDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta un token de acceso válido.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'El rol no tiene privilegios de administración.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La cuenta no existe.',
+    type: ErrorRespuestaDto,
+  })
+  obtener(@Param() { id }: IdUsuarioParamDto): Promise<UsuarioRespuesta> {
+    return this.usuarios.obtenerPorId(id);
+  }
+
+  /** Cambia el rol de una cuenta. Solo administrador. */
+  @Patch(':id/rol')
+  @Roles('administrador')
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({
+    summary: 'Cambiar el rol de una cuenta (solo administrador)',
+    description:
+      'Requiere rol `administrador` (RBAC). Un `validador` recibe `403 ACCESO_DENEGADO`.',
+  })
+  @ApiOkResponse({ description: 'Rol actualizado.', type: UsuarioRespuestaDto })
+  @ApiUnauthorizedResponse({
+    description: 'Falta un token de acceso válido.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'El rol no tiene privilegios de administración.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La cuenta no existe.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'La validación de la solicitud falló.',
+    type: ErrorRespuestaDto,
+  })
+  cambiarRol(
+    @Param() { id }: IdUsuarioParamDto,
+    @Body() dto: CambiarRolDto,
+  ): Promise<UsuarioRespuesta> {
+    return this.usuarios.cambiarRol(id, dto.rol);
+  }
+
+  /** Suspende o reactiva una cuenta. Solo administrador. */
+  @Patch(':id/estado')
+  @Roles('administrador')
+  @ApiBearerAuth('bearerAuth')
+  @ApiOperation({
+    summary: 'Cambiar el estado de una cuenta (solo administrador)',
+    description:
+      'Requiere rol `administrador` (RBAC). Permite suspender/activar una cuenta. Un `validador` recibe `403 ACCESO_DENEGADO`.',
+  })
+  @ApiOkResponse({
+    description: 'Estado actualizado.',
+    type: UsuarioRespuestaDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta un token de acceso válido.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'El rol no tiene privilegios de administración.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La cuenta no existe.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'La validación de la solicitud falló.',
+    type: ErrorRespuestaDto,
+  })
+  cambiarEstado(
+    @Param() { id }: IdUsuarioParamDto,
+    @Body() dto: CambiarEstadoDto,
+  ): Promise<UsuarioRespuesta> {
+    return this.usuarios.cambiarEstado(id, dto.estado);
   }
 }

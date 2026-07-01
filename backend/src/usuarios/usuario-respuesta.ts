@@ -34,6 +34,20 @@ export const tokenRespuestaSchema = z.object({
 export type TokenRespuesta = z.infer<typeof tokenRespuestaSchema>;
 export class TokenRespuestaDto extends createZodDto(tokenRespuestaSchema) {}
 
+/** Página de cuentas (esquema `UsuariosPaginados`), para el listado de admin. */
+export const usuariosPaginadosSchema = z.object({
+  datos: z.array(usuarioRespuestaSchema),
+  paginacion: z.object({
+    pagina: z.number().int(),
+    porPagina: z.number().int(),
+    total: z.number().int(),
+    totalPaginas: z.number().int(),
+  }),
+});
+export class UsuariosPaginadosDto extends createZodDto(
+  usuariosPaginadosSchema,
+) {}
+
 /**
  * Mapea la entidad `Usuario` al recurso del contrato, excluyendo
  * explícitamente `passwordHash` (no se copia ningún campo de credencial).

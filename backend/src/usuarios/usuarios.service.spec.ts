@@ -2,6 +2,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import {
   ConflictoException,
   NoAutenticadoException,
+  RecursoNoEncontradoException,
 } from '../common/errors/dominio.exception';
 import { ServicioDeHashing } from './hashing.service';
 import { ServicioDeTokens } from './token.service';
@@ -15,6 +16,7 @@ import {
 
 type RepoMock = {
   findOne: jest.Mock;
+  findAndCount: jest.Mock;
   create: jest.Mock;
   save: jest.Mock;
 };
@@ -36,6 +38,7 @@ function crear(): {
 } {
   const repo: RepoMock = {
     findOne: jest.fn().mockResolvedValue(null),
+    findAndCount: jest.fn().mockResolvedValue([[], 0]),
     create: jest.fn((x: Partial<Usuario>) => x),
     save: jest.fn((x: Usuario) =>
       Promise.resolve({
@@ -296,5 +299,101 @@ describe('UsuariosService.actualizarPerfil', () => {
     expect(usuario.nombre).toBe('Nuevo');
     expect(usuario.rol).toBe('validador');
     expect(usuario.estado).toBe('activo');
+  });
+});
+
+describe('UsuariosService.listar (admin)', () => {
+  it('pagina las cuentas y arma el sobre RespuestaPaginada', async () => {
+    const { servicio, repo } = crear();
+    repo.findAndCount.mockResolvedValue([
+      [usuarioActivo({ id: 'u1' }), usuarioActivo({ id: 'u2' })],
+      45,
+    ]);
+
+    const respuesta = await servicio.listar({ pagina: 2, porPagina: 20 });
+
+    expect(repo.findAndCount).toHaveBeenCalledWith({
+      order: { fechaCreacion: 'DESC' },
+      skip: 20,
+      take: 20,
+    });
+    expect(respuesta.datos).toHaveLength(2);
+    expect(respuesta.datos[0]).not.toHaveProperty('passwordHash');
+    expect(respuesta.paginacion).toEqual({
+      pagina: 2,
+      porPagina: 20,
+      total: 45,
+      totalPaginas: 3,
+    });
+  });
+});
+
+describe('UsuariosService.obtenerPorId (admin)', () => {
+  it('devuelve cualquier cuenta por id, sin filtrar por propietario', async () => {
+    const { servicio, repo } = crear();
+    repo.findOne.mockResolvedValue(usuarioActivo({ id: 'otro' }));
+
+    const dto = await servicio.obtenerPorId('otro');
+
+    expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 'otro' } });
+    expect(dto.id).toBe('otro');
+    expect(dto).not.toHaveProperty('passwordHash');
+  });
+
+  it('lanza RECURSO_NO_ENCONTRADO si la cuenta no existe', async () => {
+    const { servicio, repo } = crear();
+    repo.findOne.mockResolvedValue(null);
+
+    await expect(servicio.obtenerPorId('inexistente')).rejects.toBeInstanceOf(
+      RecursoNoEncontradoException,
+    );
+  });
+});
+
+describe('UsuariosService.cambiarRol (admin)', () => {
+  it('actualiza el rol de la cuenta', async () => {
+    const { servicio, repo } = crear();
+    repo.findOne.mockResolvedValue(usuarioActivo({ rol: 'validador' }));
+
+    const dto = await servicio.cambiarRol('u1', 'administrador');
+
+    expect(dto.rol).toBe('administrador');
+    expect(repo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ rol: 'administrador' }),
+    );
+  });
+
+  it('lanza RECURSO_NO_ENCONTRADO si la cuenta no existe', async () => {
+    const { servicio, repo } = crear();
+    repo.findOne.mockResolvedValue(null);
+
+    await expect(
+      servicio.cambiarRol('inexistente', 'administrador'),
+    ).rejects.toBeInstanceOf(RecursoNoEncontradoException);
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+});
+
+describe('UsuariosService.cambiarEstado (admin)', () => {
+  it('suspende una cuenta activa', async () => {
+    const { servicio, repo } = crear();
+    repo.findOne.mockResolvedValue(usuarioActivo({ estado: 'activo' }));
+
+    const dto = await servicio.cambiarEstado('u1', 'suspendido');
+
+    expect(dto.estado).toBe('suspendido');
+    expect(repo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ estado: 'suspendido' }),
+    );
+  });
+
+  it('lanza RECURSO_NO_ENCONTRADO si la cuenta no existe', async () => {
+    const { servicio, repo } = crear();
+    repo.findOne.mockResolvedValue(null);
+
+    await expect(
+      servicio.cambiarEstado('inexistente', 'suspendido'),
+    ).rejects.toBeInstanceOf(RecursoNoEncontradoException);
+    expect(repo.save).not.toHaveBeenCalled();
   });
 });
