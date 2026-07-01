@@ -3,9 +3,9 @@ import {
   ConflictoException,
   NoAutenticadoException,
   RecursoNoEncontradoException,
-} from '../common/errors/dominio.exception';
-import { ServicioDeHashing } from './hashing.service';
-import { ServicioDeTokens } from './token.service';
+} from '../../common/errors/dominio.exception';
+import { ServicioDeHashing } from '../sesion/hashing.service';
+import { ServicioDeTokens } from '../sesion/token.service';
 import { Usuario } from './usuario.entity';
 import { UsuariosService } from './usuarios.service';
 import {

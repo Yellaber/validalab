@@ -22,12 +22,12 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { Publico } from '../auth/publico.decorator';
-import { Roles } from '../auth/roles.decorator';
-import { OwnerId } from '../auth/usuario-actual.decorator';
-import { ErrorRespuestaDto } from '../common/errors/error-respuesta.dto';
-import { PaginacionQueryDto } from '../common/pagination/paginacion.dto';
-import { RespuestaPaginada } from '../common/pagination/respuesta-paginada';
+import { Publico } from '../../auth/publico.decorator';
+import { Roles } from '../../auth/roles.decorator';
+import { OwnerId } from '../../auth/usuario-actual.decorator';
+import { ErrorRespuestaDto } from '../../common/errors/error-respuesta.dto';
+import { PaginacionQueryDto } from '../../common/pagination/paginacion.dto';
+import { RespuestaPaginada } from '../../common/pagination/respuesta-paginada';
 import {
   TokenRespuesta,
   TokenRespuestaDto,

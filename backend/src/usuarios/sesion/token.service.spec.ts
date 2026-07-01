@@ -1,7 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
-import { AppConfigService } from '../config/app-config.service';
-import { NoAutenticadoException } from '../common/errors/dominio.exception';
+import { AppConfigService } from '../../config/app-config.service';
+import { NoAutenticadoException } from '../../common/errors/dominio.exception';
 import { Sesion } from './sesion.entity';
 import { ServicioDeTokens } from './token.service';
 
