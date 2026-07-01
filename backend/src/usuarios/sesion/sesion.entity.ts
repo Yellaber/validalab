@@ -7,7 +7,7 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { Usuario } from './usuario.entity';
+import { Usuario } from '../usuario/usuario.entity';
 
 /**
  * Sesión de refresh token. Guarda solo el HASH del refresh token opaco (nunca

@@ -3,9 +3,9 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Claims, Rol } from '../auth/claims';
-import { AppConfigService } from '../config/app-config.service';
-import { NoAutenticadoException } from '../common/errors/dominio.exception';
+import { Claims, Rol } from '../../auth/claims';
+import { AppConfigService } from '../../config/app-config.service';
+import { NoAutenticadoException } from '../../common/errors/dominio.exception';
 import { Sesion } from './sesion.entity';
 
 /** Datos mínimos del usuario necesarios para firmar su accessToken. */

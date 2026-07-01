@@ -2,8 +2,8 @@ import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
-import { UsuariosController } from '../usuarios/usuarios.controller';
-import { UsuariosService } from '../usuarios/usuarios.service';
+import { UsuariosController } from '../usuarios/usuario/usuarios.controller';
+import { UsuariosService } from '../usuarios/usuario/usuarios.service';
 
 /**
  * Verifica que el documento OpenAPI que sirve `/docs` refleja el módulo usuarios:
