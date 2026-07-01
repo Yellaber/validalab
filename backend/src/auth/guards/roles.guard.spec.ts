@@ -3,8 +3,8 @@ import { Reflector } from '@nestjs/core';
 import {
   AccesoDenegadoException,
   NoAutenticadoException,
-} from '../common/errors/dominio.exception';
-import { Rol, UsuarioAutenticado } from './claims';
+} from '../../common/errors/dominio.exception';
+import { Rol, UsuarioAutenticado } from '../claims';
 import { RolesGuard } from './roles.guard';
 
 function crearContexto(usuario?: UsuarioAutenticado): ExecutionContext {
