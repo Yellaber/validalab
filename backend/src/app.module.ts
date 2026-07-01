@@ -5,10 +5,17 @@ import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { IdeasModule } from './ideas/ideas.module';
 import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
 
 @Module({
-  imports: [AppConfigModule, DatabaseModule, AuthModule, UsuariosModule],
+  imports: [
+    AppConfigModule,
+    DatabaseModule,
+    AuthModule,
+    UsuariosModule,
+    IdeasModule,
+  ],
   controllers: [],
   providers: [
     // Filtro global: normaliza toda excepción al sobre `Error` del contrato.
