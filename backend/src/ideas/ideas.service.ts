@@ -60,7 +60,7 @@ export class IdeasService {
 
   /** Devuelve una idea propia por `id`. Ajena → 403; inexistente → 404. */
   async obtener(ownerId: string, id: string): Promise<IdeaRespuesta> {
-    return aIdeaDto(await this.buscarPropia(ownerId, id));
+    return aIdeaDto(await this.asegurarPropia(ownerId, id));
   }
 
   /**
@@ -73,7 +73,7 @@ export class IdeasService {
     id: string,
     datos: ActualizarIdeaDto,
   ): Promise<IdeaRespuesta> {
-    const idea = await this.buscarPropia(ownerId, id);
+    const idea = await this.asegurarPropia(ownerId, id);
     if (datos.titulo !== undefined) idea.titulo = datos.titulo;
     if (datos.descripcion !== undefined) idea.descripcion = datos.descripcion;
     if (datos.problema !== undefined) idea.problema = datos.problema;
@@ -88,7 +88,7 @@ export class IdeasService {
    * evidencia. Ajena → 403; inexistente → 404.
    */
   async archivar(ownerId: string, id: string): Promise<IdeaRespuesta> {
-    const idea = await this.buscarPropia(ownerId, id);
+    const idea = await this.asegurarPropia(ownerId, id);
     idea.estado = 'archivada';
     return aIdeaDto(await this.ideas.save(idea));
   }
@@ -99,7 +99,7 @@ export class IdeasService {
    * inexistente → 404.
    */
   async desarchivar(ownerId: string, id: string): Promise<IdeaRespuesta> {
-    const idea = await this.buscarPropia(ownerId, id);
+    const idea = await this.asegurarPropia(ownerId, id);
     if (idea.estado !== 'archivada') {
       throw new ConflictoException('La idea no está archivada.');
     }
@@ -111,9 +111,10 @@ export class IdeasService {
    * Carga una idea por `id` y verifica la propiedad. Inexistente →
    * `RecursoNoEncontradoException` (404); existente pero de otro `owner_id` →
    * `AccesoDenegadoException` (403), sin revelar sus datos. Es la convención de
-   * aislamiento multi-tenant documentada en `@OwnerId()`.
+   * aislamiento multi-tenant documentada en `@OwnerId()`. Público para que los
+   * recursos anidados (p. ej. hipótesis) hereden la barrera de propiedad.
    */
-  private async buscarPropia(ownerId: string, id: string): Promise<Idea> {
+  async asegurarPropia(ownerId: string, id: string): Promise<Idea> {
     const idea = await this.ideas.findOne({ where: { id } });
     if (!idea) {
       throw new RecursoNoEncontradoException('La idea solicitada no existe.');
