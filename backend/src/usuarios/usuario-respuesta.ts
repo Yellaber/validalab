@@ -1,24 +1,38 @@
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 import { Usuario } from './usuario.entity';
-import { EstadoUsuario, Rol } from './usuario.types';
+import { estadoUsuarioSchema, rolSchema } from './usuario.types';
+
+/**
+ * Esquemas de respuesta del módulo usuarios. Se derivan con Zod (única gramática
+ * de esquemas del proyecto) para servir a dos consumidores desde una sola fuente:
+ * el tipo TypeScript (`z.infer`) que usan servicio y controlador, y el DTO
+ * (`createZodDto`) que `@nestjs/swagger` publica como esquema OpenAPI vía
+ * `patchNestJsSwagger`. La forma reproduce el contrato `contrato-api/openapi.yaml`.
+ */
 
 /** Recurso `Usuario` del contrato. NUNCA incluye contraseña ni hash. */
-export interface UsuarioRespuesta {
-  id: string;
-  email: string;
-  nombre: string;
-  rol: Rol;
-  estado: EstadoUsuario;
-  fechaCreacion: string;
-}
+export const usuarioRespuestaSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
+  nombre: z.string(),
+  rol: rolSchema,
+  estado: estadoUsuarioSchema,
+  fechaCreacion: z.iso.datetime(),
+});
+export type UsuarioRespuesta = z.infer<typeof usuarioRespuestaSchema>;
+export class UsuarioRespuestaDto extends createZodDto(usuarioRespuestaSchema) {}
 
 /** Tokens de sesión emitidos en login y refresh (esquema `TokenRespuesta`). */
-export interface TokenRespuesta {
-  accessToken: string;
-  refreshToken: string;
-  tokenTipo: 'Bearer';
-  expiraEn: number;
-  usuario: UsuarioRespuesta;
-}
+export const tokenRespuestaSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  tokenTipo: z.literal('Bearer'),
+  expiraEn: z.number().int(),
+  usuario: usuarioRespuestaSchema,
+});
+export type TokenRespuesta = z.infer<typeof tokenRespuestaSchema>;
+export class TokenRespuestaDto extends createZodDto(tokenRespuestaSchema) {}
 
 /**
  * Mapea la entidad `Usuario` al recurso del contrato, excluyendo
