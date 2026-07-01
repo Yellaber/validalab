@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { estadoUsuarioSchema, rolSchema } from './usuario.types';
 
 /**
  * DTOs de entrada del módulo usuarios. Validados por el `ZodValidationPipe`
@@ -29,3 +30,22 @@ export const actualizarPerfilSchema = z.object({
   nombre: z.string().min(1),
 });
 export class ActualizarPerfilDto extends createZodDto(actualizarPerfilSchema) {}
+
+/**
+ * DTOs de administración (rol `administrador`). El `id` de la cuenta objetivo
+ * llega por la ruta y se valida como uuid; un formato inválido → VALIDACION_FALLIDA.
+ */
+export const idUsuarioParamSchema = z.object({
+  id: z.uuid(),
+});
+export class IdUsuarioParamDto extends createZodDto(idUsuarioParamSchema) {}
+
+export const cambiarRolSchema = z.object({
+  rol: rolSchema,
+});
+export class CambiarRolDto extends createZodDto(cambiarRolSchema) {}
+
+export const cambiarEstadoSchema = z.object({
+  estado: estadoUsuarioSchema,
+});
+export class CambiarEstadoDto extends createZodDto(cambiarEstadoSchema) {}
