@@ -23,5 +23,8 @@ import { UmbralesService } from './umbral/umbrales.service';
   imports: [TypeOrmModule.forFeature([Idea, Hipotesis, UmbralIdea])],
   controllers: [IdeasController, HipotesisController, UmbralesController],
   providers: [IdeasService, HipotesisService, UmbralesService],
+  // `IdeasService` se exporta para que otros contextos acotados (p. ej.
+  // `contactos`) reutilicen `asegurarPropia` heredando el aislamiento de la idea.
+  exports: [IdeasService],
 })
 export class IdeasModule {}
