@@ -1,19 +1,33 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ContactosModule } from '../contactos/contactos.module';
+import { IdeasModule } from '../ideas/ideas.module';
+import { Entrevista } from './entrevista/entrevista.entity';
+import { EntrevistasController } from './entrevista/entrevistas.controller';
+import { EntrevistasService } from './entrevista/entrevistas.service';
 import { Guion } from './guion/guion.entity';
 import { GuionesController } from './guion/guiones.controller';
 import { GuionesService } from './guion/guiones.service';
 
 /**
- * Módulo de dominio `entrevistas` (épica E4). Estrenado con el sub-dominio
- * `guion/`: el guión de entrevista reutilizable entre ideas (recurso de nivel de
- * usuario, aislado por `owner_id`). Los siguientes chunks añadirán el sub-dominio
- * `entrevista/` (registro + scoring por IA). Reutiliza la fundación: guard
- * global, `@OwnerId()`, paginación y el sobre `Error`.
+ * Módulo de dominio `entrevistas` (épica E4), con dos sub-dominios:
+ * - `guion/`: el guión de entrevista reutilizable (recurso de usuario).
+ * - `entrevista/`: el registro de entrevistas vinculadas a idea+contacto+guión,
+ *   que mueve el contacto a `entrevistado`.
+ *
+ * Depende de `ideas` (asegurarPropia) y `contactos` (validar el contacto de la
+ * idea + marcarlo `entrevistado`), importados vía sus módulos; el guión se
+ * reutiliza dentro del propio módulo. El scoring por IA (agente) llega en un
+ * chunk posterior, tras adelantar BYOK. Reutiliza la fundación: guard global,
+ * `@OwnerId()`, paginación y el sobre `Error`.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Guion])],
-  controllers: [GuionesController],
-  providers: [GuionesService],
+  imports: [
+    TypeOrmModule.forFeature([Guion, Entrevista]),
+    IdeasModule,
+    ContactosModule,
+  ],
+  controllers: [GuionesController, EntrevistasController],
+  providers: [GuionesService, EntrevistasService],
 })
 export class EntrevistasModule {}

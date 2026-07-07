@@ -46,3 +46,13 @@ export class ValidacionFallidaException extends ErrorDeDominio {
     super(CodigoError.VALIDACION_FALLIDA, mensaje, detalles);
   }
 }
+
+/**
+ * Una entrevista no puede existir sin una idea y un contacto (y guión) válidos
+ * del mismo usuario (RNF-14). Se traduce a `422 ENTREVISTA_SIN_VINCULO`.
+ */
+export class EntrevistaSinVinculoException extends ErrorDeDominio {
+  constructor(mensaje = 'La entrevista carece de un vínculo válido.') {
+    super(CodigoError.ENTREVISTA_SIN_VINCULO, mensaje);
+  }
+}

@@ -16,5 +16,8 @@ import { ContactosService } from './contactos.service';
   imports: [TypeOrmModule.forFeature([Contacto]), IdeasModule],
   controllers: [ContactosController],
   providers: [ContactosService],
+  // Se exporta para que el módulo `entrevistas` valide el vínculo del contacto
+  // con la idea y lo marque `entrevistado` al registrar una entrevista (E4).
+  exports: [ContactosService],
 })
 export class ContactosModule {}
