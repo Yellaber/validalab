@@ -6,6 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { IdeasModule } from './ideas/ideas.module';
+import { ContactosModule } from './contactos/contactos.module';
 import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
 
 @Module({
@@ -15,6 +16,7 @@ import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
     AuthModule,
     UsuariosModule,
     IdeasModule,
+    ContactosModule,
   ],
   controllers: [],
   providers: [
