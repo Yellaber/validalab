@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   ConflictoException,
+  EntrevistaSinVinculoException,
   RecursoNoEncontradoException,
   ValidacionFallidaException,
 } from '../common/errors/dominio.exception';
@@ -168,6 +169,36 @@ export class ContactosService {
       );
     }
     return aContactoDto(await this.contactos.save(contacto));
+  }
+
+  /**
+   * Verifica que exista un contacto con ese `id` en la idea indicada, para el
+   * vínculo de una entrevista (RNF-14). Si no, `EntrevistaSinVinculoException`
+   * (422). La propiedad de la idea la verifica el llamador. Consumido por el
+   * módulo `entrevistas`.
+   */
+  async asegurarVinculoConIdea(
+    ideaId: string,
+    contactoId: string,
+  ): Promise<Contacto> {
+    const contacto = await this.contactos.findOne({
+      where: { id: contactoId, ideaId },
+    });
+    if (!contacto) {
+      throw new EntrevistaSinVinculoException(
+        'El contacto no pertenece a esta idea.',
+      );
+    }
+    return contacto;
+  }
+
+  /**
+   * Marca un contacto como `entrevistado`. Es la transición que el embudo manual
+   * de E3 no permite: la asigna directamente el registro de una entrevista (E4).
+   */
+  async marcarEntrevistado(contacto: Contacto): Promise<void> {
+    contacto.estado = 'entrevistado';
+    await this.contactos.save(contacto);
   }
 
   /**

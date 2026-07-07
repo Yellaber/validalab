@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   AccesoDenegadoException,
+  EntrevistaSinVinculoException,
   RecursoNoEncontradoException,
 } from '../../common/errors/dominio.exception';
 import {
@@ -80,6 +81,20 @@ export class GuionesService {
   async eliminar(ownerId: string, id: string): Promise<void> {
     const guion = await this.buscarPropio(ownerId, id);
     await this.guiones.remove(guion);
+  }
+
+  /**
+   * Verifica, para el vínculo de una entrevista (RNF-14), que el guión exista y
+   * sea del usuario. Si no, `EntrevistaSinVinculoException` (422). Consumido por
+   * el sub-dominio `entrevista/`.
+   */
+  async asegurarVinculo(ownerId: string, guionId: string): Promise<void> {
+    const guion = await this.guiones.findOne({ where: { id: guionId } });
+    if (!guion || guion.ownerId !== ownerId) {
+      throw new EntrevistaSinVinculoException(
+        'El guión no existe o no es del usuario.',
+      );
+    }
   }
 
   /** Transforma las preguntas de entrada en value-objects con `id` generado. */
