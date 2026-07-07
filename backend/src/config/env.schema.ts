@@ -37,6 +37,21 @@ export const envSchema = z.object({
   // Vigencia del refresh token opaco (se almacena hasheado). Formato de `ms`
   // (p. ej. 30d, 12h).
   REFRESH_TOKEN_TTL: z.string().min(1).default('30d'),
+
+  // --- BYOK (configuración del proveedor de IA por usuario) ---
+  // Clave AES-256 (32 bytes = 64 hex) para cifrar en reposo las API keys BYOK.
+  BYOK_CLAVE_CIFRADO: z
+    .string()
+    .regex(
+      /^[0-9a-fA-F]{64}$/,
+      'Debe ser 64 caracteres hexadecimales (32 bytes).',
+    ),
+  // Si es `false`, la API key no se valida contra el proveedor real (dev/test):
+  // cualquier key no vacía se acepta. En producción debe ser `true`.
+  BYOK_VALIDAR_KEY: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 /** Configuración del entorno ya validada y con tipos derivados. */

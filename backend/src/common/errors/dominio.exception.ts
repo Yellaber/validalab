@@ -56,3 +56,23 @@ export class EntrevistaSinVinculoException extends ErrorDeDominio {
     super(CodigoError.ENTREVISTA_SIN_VINCULO, mensaje);
   }
 }
+
+/**
+ * La API key BYOK no valida contra el proveedor (RF-20). Se traduce a
+ * `422 API_KEY_INVALIDA`.
+ */
+export class ApiKeyInvalidaException extends ErrorDeDominio {
+  constructor(mensaje = 'La API key no es válida para el proveedor.') {
+    super(CodigoError.API_KEY_INVALIDA, mensaje);
+  }
+}
+
+/**
+ * El proveedor de IA no está disponible (p. ej. no responde al validar la key).
+ * Se traduce a `503 PROVEEDOR_IA_NO_DISPONIBLE`.
+ */
+export class ProveedorNoDisponibleException extends ErrorDeDominio {
+  constructor(mensaje = 'El proveedor de IA no está disponible.') {
+    super(CodigoError.PROVEEDOR_IA_NO_DISPONIBLE, mensaje);
+  }
+}
