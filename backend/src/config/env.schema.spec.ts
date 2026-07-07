@@ -8,6 +8,7 @@ describe('validateEnv', () => {
     DB_PASSWORD: 'secreto',
     DB_DATABASE: 'validalab',
     JWT_ACCESS_SECRET: 'un-secreto-de-prueba',
+    BYOK_CLAVE_CIFRADO: 'a'.repeat(64),
   };
 
   it('valida un entorno completo y aplica coerción y valores por defecto', () => {

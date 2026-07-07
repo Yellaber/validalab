@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { aModeloDto } from './catalogo-respuesta';
 import { ModeloIA } from './modelo-ia.entity';
-import { PROVEEDORES, ProveedorIaDominio } from './proveedor.types';
+import {
+  PROVEEDORES,
+  ProveedorIaDominio,
+  ProveedorId,
+} from './proveedor.types';
 
 @Injectable()
 export class CatalogoService {
@@ -28,5 +32,14 @@ export class CatalogoService {
         .filter((m) => m.proveedor === proveedor.id)
         .map(aModeloDto),
     }));
+  }
+
+  /**
+   * Ids de modelo del catálogo de un proveedor. Lo usa la configuración BYOK
+   * para validar que los modelos elegidos pertenezcan al proveedor.
+   */
+  async modeloIdsDe(proveedor: ProveedorId): Promise<string[]> {
+    const modelos = await this.modelos.find({ where: { proveedor } });
+    return modelos.map((m) => m.modeloId);
   }
 }

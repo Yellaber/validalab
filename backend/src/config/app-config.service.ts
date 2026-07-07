@@ -57,4 +57,12 @@ export class AppConfigService {
       refreshTokenTtl: this.config.get('REFRESH_TOKEN_TTL', { infer: true }),
     };
   }
+
+  /** Configuración BYOK: clave de cifrado de las API keys y flag de validación. */
+  get byok(): { claveCifrado: string; validarKey: boolean } {
+    return {
+      claveCifrado: this.config.get('BYOK_CLAVE_CIFRADO', { infer: true }),
+      validarKey: this.config.get('BYOK_VALIDAR_KEY', { infer: true }),
+    };
+  }
 }
