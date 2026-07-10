@@ -24,7 +24,9 @@ import { UmbralesService } from './umbral/umbrales.service';
   controllers: [IdeasController, HipotesisController, UmbralesController],
   providers: [IdeasService, HipotesisService, UmbralesService],
   // `IdeasService` se exporta para que otros contextos acotados (p. ej.
-  // `contactos`) reutilicen `asegurarPropia` heredando el aislamiento de la idea.
-  exports: [IdeasService],
+  // `contactos`, `entrevistas`) reutilicen `asegurarPropia` heredando el
+  // aislamiento de la idea. `HipotesisService`/`UmbralesService` los consume la
+  // capa agéntica (`agente`) como tools de dominio para el scoring.
+  exports: [IdeasService, HipotesisService, UmbralesService],
 })
 export class IdeasModule {}

@@ -52,6 +52,21 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
+
+  // --- Agente (Validador Inteligente) ---
+  // `fake` corta la capa agéntica y produce una salida de scoring determinista
+  // sin invocar a ningún proveedor ni salir a la red (dev/test). `real` invoca
+  // al proveedor configurado por el usuario (BYOK).
+  AGENTE_MODO: z.enum(['real', 'fake']).default('real'),
+  // Límite de iteraciones del grafo por ejecución (recursionLimit de LangGraph).
+  AGENTE_MAX_ITERACIONES: z.coerce.number().int().positive().default(6),
+  // Timeout por ejecución del agente, en milisegundos.
+  AGENTE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  // Reintentos ante una salida que no cumple el esquema Zod antes de fallar.
+  AGENTE_MAX_REINTENTOS: z.coerce.number().int().min(0).default(2),
+  // Versión de la rúbrica de scoring; participa en el hash de idempotencia.
+  // Súbela para invalidar todos los scores previos sin tocar datos.
+  SCORING_VERSION_RUBRICA: z.string().min(1).default('v1'),
 });
 
 /** Configuración del entorno ya validada y con tipos derivados. */

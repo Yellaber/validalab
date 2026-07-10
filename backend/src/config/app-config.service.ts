@@ -65,4 +65,25 @@ export class AppConfigService {
       validarKey: this.config.get('BYOK_VALIDAR_KEY', { infer: true }),
     };
   }
+
+  /** Configuración del agente Validador Inteligente (modo y gobierno de ejecución). */
+  get agente(): {
+    modo: Env['AGENTE_MODO'];
+    maxIteraciones: number;
+    timeoutMs: number;
+    maxReintentos: number;
+    versionRubrica: string;
+  } {
+    return {
+      modo: this.config.get('AGENTE_MODO', { infer: true }),
+      maxIteraciones: this.config.get('AGENTE_MAX_ITERACIONES', {
+        infer: true,
+      }),
+      timeoutMs: this.config.get('AGENTE_TIMEOUT_MS', { infer: true }),
+      maxReintentos: this.config.get('AGENTE_MAX_REINTENTOS', { infer: true }),
+      versionRubrica: this.config.get('SCORING_VERSION_RUBRICA', {
+        infer: true,
+      }),
+    };
+  }
 }

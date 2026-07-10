@@ -65,6 +65,28 @@ export class ConfiguracionService {
     return aConfiguracionDto(await this.configuraciones.save(config));
   }
 
+  /**
+   * Devuelve la credencial descifrada para el scoring de una idea propia: el
+   * proveedor y el `modeloScoring` configurados y la API key en claro. Es de uso
+   * INTERNO (la consume la capa agéntica, RNF-06); NUNCA se expone por HTTP. Sin
+   * config BYOK → `null` (el llamador decide cómo degradar).
+   */
+  async credencialParaScoring(ownerId: string): Promise<{
+    proveedor: ProveedorId;
+    modelo: string;
+    apiKey: string;
+  } | null> {
+    const config = await this.configuraciones.findOne({ where: { ownerId } });
+    if (!config) {
+      return null;
+    }
+    return {
+      proveedor: config.proveedor,
+      modelo: config.modeloScoring,
+      apiKey: this.cifrado.descifrar(config.apiKeyCifrada),
+    };
+  }
+
   /** Revoca la config BYOK (y su credencial cifrada). Sin config → 404. */
   async eliminar(ownerId: string): Promise<void> {
     const config = await this.configuraciones.findOne({ where: { ownerId } });

@@ -9,6 +9,7 @@ import { IdeasModule } from './ideas/ideas.module';
 import { ContactosModule } from './contactos/contactos.module';
 import { EntrevistasModule } from './entrevistas/entrevistas.module';
 import { ProveedoresModule } from './proveedores/proveedores.module';
+import { AgenteModule } from './agente/agente.module';
 import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
 
 @Module({
@@ -21,6 +22,7 @@ import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
     ContactosModule,
     EntrevistasModule,
     ProveedoresModule,
+    AgenteModule,
   ],
   controllers: [],
   providers: [

@@ -26,5 +26,8 @@ import { ValidadorDeApiKey } from './configuracion/validador-apikey.service';
     ServicioDeCifrado,
     ValidadorDeApiKey,
   ],
+  // `ConfiguracionService` se exporta para que la capa agéntica (`agente`)
+  // obtenga la credencial de scoring descifrada del usuario (RNF-06 / BYOK).
+  exports: [ConfiguracionService],
 })
 export class ProveedoresModule {}

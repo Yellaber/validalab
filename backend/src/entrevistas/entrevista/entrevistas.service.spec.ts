@@ -5,6 +5,7 @@ import {
   EntrevistaSinVinculoException,
   RecursoNoEncontradoException,
 } from '../../common/errors/dominio.exception';
+import { AgenteService } from '../../agente/scoring/agente.service';
 import { ContactosService } from '../../contactos/contactos.service';
 import { IdeasService } from '../../ideas/idea/ideas.service';
 import { GuionesService } from '../guion/guiones.service';
@@ -34,6 +35,7 @@ function crear(): {
     marcarEntrevistado: jest.Mock;
   };
   guiones: { asegurarVinculo: jest.Mock };
+  agente: { solicitarScoring: jest.Mock };
 } {
   const repo: RepoMock = {
     findAndCount: jest.fn().mockResolvedValue([[], 0]),
@@ -58,13 +60,15 @@ function crear(): {
     marcarEntrevistado: jest.fn().mockResolvedValue(undefined),
   };
   const guiones = { asegurarVinculo: jest.fn().mockResolvedValue(undefined) };
+  const agente = { solicitarScoring: jest.fn().mockResolvedValue(undefined) };
   const servicio = new EntrevistasService(
     repo as unknown as Repository<Entrevista>,
     ideas as unknown as IdeasService,
     contactos as unknown as ContactosService,
     guiones as unknown as GuionesService,
+    agente as unknown as AgenteService,
   );
-  return { servicio, repo, ideas, contactos, guiones };
+  return { servicio, repo, ideas, contactos, guiones, agente };
 }
 
 function entrevistaDe(parcial: Partial<Entrevista> = {}): Entrevista {
@@ -108,6 +112,17 @@ describe('EntrevistasService.crear', () => {
     expect(contactos.marcarEntrevistado).toHaveBeenCalled();
     expect(dto.estadoScoring).toBe('pendiente');
     expect(dto.score).toBeNull();
+  });
+
+  it('dispara el scoring del agente al crear', async () => {
+    const { servicio, agente } = crear();
+
+    await servicio.crear(OWNER, IDEA, datos);
+
+    expect(agente.solicitarScoring).toHaveBeenCalledWith(
+      OWNER,
+      expect.objectContaining({ ideaId: IDEA }),
+    );
   });
 
   it('propaga ENTREVISTA_SIN_VINCULO si el contacto no es de la idea', async () => {
@@ -192,6 +207,22 @@ describe('EntrevistasService.actualizar', () => {
 
     expect(dto.estadoScoring).toBe('pendiente');
     expect(dto.score).toBeNull();
+  });
+
+  it('cambiar respuestas re-dispara el scoring; cambiar solo citas no', async () => {
+    const { servicio, repo, agente } = crear();
+    repo.findOne.mockResolvedValue(entrevistaDe({ estadoScoring: 'puntuada' }));
+
+    await servicio.actualizar(OWNER, IDEA, 'e1', {
+      respuestas: [{ preguntaId: 'p2', texto: 'nueva' }],
+    });
+    expect(agente.solicitarScoring).toHaveBeenCalledTimes(1);
+
+    agente.solicitarScoring.mockClear();
+    await servicio.actualizar(OWNER, IDEA, 'e1', {
+      citas: [{ texto: 'una cita' }],
+    });
+    expect(agente.solicitarScoring).not.toHaveBeenCalled();
   });
 
   it('cambiar solo citas no afecta el estadoScoring', async () => {

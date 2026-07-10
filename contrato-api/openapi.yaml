@@ -2365,7 +2365,8 @@ components:
       type: string
       description: Estado del scoring del agente sobre la entrevista.
       enum:
-        - pendiente   # scoring disparado, aún sin resultado
+        - pendiente   # scoring aún no disparado / respuestas cambiadas, a la espera
+        - procesando  # el agente está ejecutando el scoring (asíncrono)
         - puntuada    # el agente produjo un score válido
         - fallida     # la salida del agente no validó tras reintentos (SALIDA_AGENTE_INVALIDA)
     ScoreEntrevista:
