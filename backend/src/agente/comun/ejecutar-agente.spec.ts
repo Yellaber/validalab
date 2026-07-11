@@ -1,5 +1,6 @@
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { extraerSalidaEstructurada } from './grafo-scoring';
+import { salidaScoringSchema } from '../scoring/esquema-scoring';
+import { extraerSalidaEstructurada } from './ejecutar-agente';
 
 /** Modelo mínimo cuyo `withStructuredOutput().invoke()` devuelve la cola indicada. */
 function modeloConSalidas(...salidas: unknown[]): BaseChatModel {
@@ -10,14 +11,6 @@ function modeloConSalidas(...salidas: unknown[]): BaseChatModel {
   } as unknown as BaseChatModel;
 }
 
-const params = (modelo: BaseChatModel, maxReintentos: number) => ({
-  modelo,
-  system: 'sys',
-  human: 'hum',
-  analisis: 'analisis',
-  maxReintentos,
-});
-
 const senalesEstructuradas = {
   dolorConfirmado: true,
   dolorUrgente: false,
@@ -25,7 +18,17 @@ const senalesEstructuradas = {
   disposicionPago: false,
 };
 
-describe('extraerSalidaEstructurada', () => {
+const params = (modelo: BaseChatModel, maxReintentos: number) => ({
+  modelo,
+  system: 'sys',
+  human: 'hum',
+  analisis: 'analisis',
+  esquema: salidaScoringSchema,
+  nombreSalida: 'PuntuacionEntrevista',
+  maxReintentos,
+});
+
+describe('extraerSalidaEstructurada (runner genérico)', () => {
   it('devuelve la salida válida a la primera', async () => {
     const modelo = modeloConSalidas({
       score: 8,
@@ -44,7 +47,7 @@ describe('extraerSalidaEstructurada', () => {
 
   it('reintenta ante una salida inválida y acaba devolviendo la válida', async () => {
     const modelo = modeloConSalidas(
-      { score: 99, justificacion: 'x', senales: [], confianza: 50 }, // score fuera de rango
+      { score: 99, justificacion: 'x', senales: [], confianza: 50 }, // fuera de rango
       {
         score: 6,
         justificacion: 'ok',

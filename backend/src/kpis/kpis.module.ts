@@ -33,6 +33,8 @@ import { KpisService } from './tablero/kpis.service';
   ],
   controllers: [KpisController, AlertasController],
   providers: [KpisService, AlertasService],
-  exports: [AlertasService],
+  // `AlertasService` para el disparo desde el agente (E5b); `KpisService` para
+  // que el veredicto (E6) calcule el snapshot de KPIs congelado.
+  exports: [AlertasService, KpisService],
 })
 export class KpisModule {}

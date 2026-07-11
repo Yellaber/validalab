@@ -124,4 +124,20 @@ export class IdeasService {
     }
     return idea;
   }
+
+  /**
+   * Fija el estado de validación de una idea propia a partir de un veredicto
+   * aprobado (`go`/`pivote`/`kill`). Es el ÚNICO camino legítimo para fijar esos
+   * estados (la edición de contenido en E1 no los admite). Lo invoca la capa
+   * agéntica al aprobar un veredicto (E6, modo consultivo).
+   */
+  async fijarEstadoPorVeredicto(
+    ownerId: string,
+    id: string,
+    estado: 'go' | 'pivote' | 'kill',
+  ): Promise<void> {
+    const idea = await this.asegurarPropia(ownerId, id);
+    idea.estado = estado;
+    await this.ideas.save(idea);
+  }
 }
