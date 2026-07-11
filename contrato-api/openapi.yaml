@@ -2369,6 +2369,27 @@ components:
         - procesando  # el agente está ejecutando el scoring (asíncrono)
         - puntuada    # el agente produjo un score válido
         - fallida     # la salida del agente no validó tras reintentos (SALIDA_AGENTE_INVALIDA)
+    SenalesEstructuradas:
+      type: object
+      readOnly: true
+      description: |
+        Señales estructuradas por entrevista que el agente clasifica al puntuar. Son el insumo de los
+        KPIs de señal de problema/pago (E5). Ausentes en scores de una rúbrica anterior (cuentan como
+        `false` al agregarlos).
+      required: [dolorConfirmado, dolorUrgente, sinSolucionActual, disposicionPago]
+      properties:
+        dolorConfirmado:
+          type: boolean
+          description: El entrevistado confirma que el problema existe y le afecta.
+        dolorUrgente:
+          type: boolean
+          description: Lo describe como urgente o prioritario.
+        sinSolucionActual:
+          type: boolean
+          description: Hoy no usa una solución que le sirva (dolor sin resolver).
+        disposicionPago:
+          type: boolean
+          description: Muestra interés explícito en pagar por una solución.
     ScoreEntrevista:
       type: object
       readOnly: true
@@ -2394,6 +2415,8 @@ components:
           minimum: 0
           maximum: 100
           description: Nivel de confianza del agente en el score (0–100).
+        senalesEstructuradas:
+          $ref: '#/components/schemas/SenalesEstructuradas'
         proveedor:
           type: string
           description: Proveedor de IA que produjo el score (config BYOK del usuario).

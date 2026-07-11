@@ -99,6 +99,9 @@ describe('AgenteService.solicitarScoring (modo fake)', () => {
         hashEntrada: calcularHashScoring(entrevista.respuestas, VERSION),
       }),
     );
+    expect(typeof set.score?.senalesEstructuradas?.dolorConfirmado).toBe(
+      'boolean',
+    );
     // traza exitosa
     expect(ejecuciones.save).toHaveBeenCalledWith(
       expect.objectContaining({

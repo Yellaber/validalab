@@ -126,6 +126,7 @@ export class AgenteService {
    */
   private puntuarFake(entrevista: Entrevista, hash: string): SalidaEjecucion {
     const semilla = parseInt(hash.slice(0, 8), 16);
+    const bits = parseInt(hash.slice(8, 16), 16);
     return {
       salida: {
         score: semilla % 11, // 0–10
@@ -135,6 +136,12 @@ export class AgenteService {
           `respuestas analizadas: ${entrevista.respuestas.length}`,
           `citas registradas: ${entrevista.citas.length}`,
         ],
+        senalesEstructuradas: {
+          dolorConfirmado: (bits & 1) === 1,
+          dolorUrgente: (bits & 2) === 2,
+          sinSolucionActual: (bits & 4) === 4,
+          disposicionPago: (bits & 8) === 8,
+        },
       },
       modo: 'fake',
       proveedor: 'fake',

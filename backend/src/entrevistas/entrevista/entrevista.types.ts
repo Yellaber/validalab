@@ -29,14 +29,34 @@ export const estadoScoringSchema = z.enum([
 export type EstadoScoring = z.infer<typeof estadoScoringSchema>;
 
 /**
+ * Señales estructuradas por entrevista que el agente clasifica al puntuar. Son el
+ * insumo de los KPIs de señal de problema/pago (E5). Se validan siempre con Zod y
+ * viajan dentro del bloque `score`. Opcionales en el score persistido: los scores
+ * de la rúbrica anterior no las tienen (cuentan como `false` en los KPIs).
+ */
+export const senalesEstructuradasSchema = z.object({
+  /** La entrevista confirma que el dolor/problema existe. */
+  dolorConfirmado: z.boolean(),
+  /** El entrevistado lo califica como urgente/prioritario. */
+  dolorUrgente: z.boolean(),
+  /** No usa hoy una solución que le sirva (dolor sin resolver). */
+  sinSolucionActual: z.boolean(),
+  /** Muestra interés explícito en pagar por una solución. */
+  disposicionPago: z.boolean(),
+});
+export type SenalesEstructuradas = z.infer<typeof senalesEstructuradasSchema>;
+
+/**
  * Resultado del scoring del agente (`ScoreEntrevista`), de solo lectura. Lo
- * produce el Validador Inteligente (chunk C); en este chunk el bloque es `null`.
+ * produce el Validador Inteligente (E4). `senalesEstructuradas` es opcional por
+ * compatibilidad con scores de la rúbrica anterior.
  */
 export const scoreEntrevistaSchema = z.object({
   score: z.number().min(0).max(10),
   justificacion: z.string(),
   senales: z.array(z.string()),
   confianza: z.number().min(0).max(100),
+  senalesEstructuradas: senalesEstructuradasSchema.optional(),
   proveedor: z.string().optional(),
   modelo: z.string().optional(),
   rubricaVersion: z.string().optional(),
