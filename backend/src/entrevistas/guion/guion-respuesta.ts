@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { esquemaPaginado } from '../../common/pagination/paginado.schema';
 import { Guion } from './guion.entity';
 import { preguntaSchema } from './guion.types';
 
@@ -21,15 +22,7 @@ export type GuionRespuesta = z.infer<typeof guionRespuestaSchema>;
 export class GuionRespuestaDto extends createZodDto(guionRespuestaSchema) {}
 
 /** Página de guiones (esquema `GuionesPaginados`). */
-export const guionesPaginadosSchema = z.object({
-  datos: z.array(guionRespuestaSchema),
-  paginacion: z.object({
-    pagina: z.number().int(),
-    porPagina: z.number().int(),
-    total: z.number().int(),
-    totalPaginas: z.number().int(),
-  }),
-});
+export const guionesPaginadosSchema = esquemaPaginado(guionRespuestaSchema);
 export class GuionesPaginadosDto extends createZodDto(guionesPaginadosSchema) {}
 
 /** Mapea la entidad `Guion` al recurso del contrato (preguntas ordenadas). */

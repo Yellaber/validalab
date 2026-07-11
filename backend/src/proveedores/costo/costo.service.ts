@@ -6,7 +6,9 @@ import { Idea } from '../../ideas/idea/idea.entity';
 import { IdeasService } from '../../ideas/idea/ideas.service';
 import { ProveedorId } from '../catalogo/proveedor.types';
 import { PrecioModelo } from '../precios/precio-modelo.entity';
+import { costoDe } from '../precios/precio.util';
 import { PreciosService } from '../precios/precios.service';
+import { ACLARACION_COSTO } from '../precios/precios-respuesta';
 import {
   CostoIdea,
   CostoIdeaResumen,
@@ -14,10 +16,6 @@ import {
   DesgloseCostoTarea,
   tareaCostoSchema,
 } from './costo-respuesta';
-
-/** Aclaración normativa (SRS §8.9.1): es un estimado, no el saldo. */
-const ACLARACION =
-  'Es un estimado del consumo de IA vía ValidaLab, calculado localmente a partir de los tokens y la tabla de precios. NO es el saldo de tu cuenta del proveedor: el saldo solo es visible en el panel de facturación del proveedor.';
 
 /** Enlace al panel de facturación por proveedor (RF-22g). Dato de plataforma, no un modelo. */
 const URL_FACTURACION: Record<ProveedorId, string> = {
@@ -74,7 +72,7 @@ export class CostoService {
       tokensSalida: desglosePorTarea.reduce((s, d) => s + d.tokensSalida, 0),
       llamadas: desglosePorTarea.reduce((s, d) => s + d.llamadas, 0),
       esEstimado: true,
-      aclaracion: ACLARACION,
+      aclaracion: ACLARACION_COSTO,
       urlFacturacion: proveedor ? URL_FACTURACION[proveedor] : null,
       fechaCalculo: new Date().toISOString(),
     };
@@ -102,18 +100,17 @@ export class CostoService {
     }
 
     const costoPorIdea = await this.resumirPorIdea(porIdea);
+    const proveedor = this.proveedorDe(ejecuciones);
     return {
       moneda: 'USD',
       costoEstimadoTotal: total,
       costoPorIdea,
-      proveedor: this.proveedorDe(ejecuciones),
+      proveedor,
       tokensEntrada,
       tokensSalida,
       esEstimado: true,
-      aclaracion: ACLARACION,
-      urlFacturacion: this.proveedorDe(ejecuciones)
-        ? URL_FACTURACION[this.proveedorDe(ejecuciones) as ProveedorId]
-        : null,
+      aclaracion: ACLARACION_COSTO,
+      urlFacturacion: proveedor ? URL_FACTURACION[proveedor] : null,
       fechaCalculo: new Date().toISOString(),
     };
   }
@@ -139,22 +136,16 @@ export class CostoService {
     };
   }
 
-  /** Costo de una ejecución: tokens × precio del modelo. Sin tokens o sin precio → 0. */
+  /** Costo de una ejecución: delega la fórmula en `PreciosService`. Sin precio → 0. */
   private costoEjecucion(
     e: EjecucionAgente,
     mapa: Map<string, PrecioModelo>,
   ): number {
-    if (e.tokensEntrada == null && e.tokensSalida == null) {
-      return 0;
-    }
     const precio = mapa.get(`${e.proveedor}|${e.modelo}`);
     if (!precio) {
       return 0;
     }
-    return (
-      ((e.tokensEntrada ?? 0) / 1_000_000) * precio.precioEntradaPorMillon +
-      ((e.tokensSalida ?? 0) / 1_000_000) * precio.precioSalidaPorMillon
-    );
+    return costoDe(precio, e.tokensEntrada ?? 0, e.tokensSalida ?? 0);
   }
 
   /** Proveedor real con el que se generó el consumo; ignora `fake`/nulos. */

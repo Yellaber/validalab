@@ -64,10 +64,7 @@ export class AgenteService {
   ): Promise<void> {
     const { versionRubrica, modo } = this.config.agente;
     const hash = calcularHashScoring(entrevista.respuestas, versionRubrica);
-    if (
-      entrevista.estadoScoring === 'puntuada' &&
-      entrevista.score?.hashEntrada === hash
-    ) {
+    if (this.estaAlDia(entrevista, hash)) {
       return; // nada cambió: no re-puntúa (RF-22c)
     }
 
@@ -104,10 +101,7 @@ export class AgenteService {
   }> {
     const { versionRubrica, modo } = this.config.agente;
     const hash = calcularHashScoring(entrevista.respuestas, versionRubrica);
-    if (
-      entrevista.estadoScoring === 'puntuada' &&
-      entrevista.score?.hashEntrada === hash
-    ) {
+    if (this.estaAlDia(entrevista, hash)) {
       return { reevaluada: false, tokensEntrada: 0, tokensSalida: 0 };
     }
     // Puntúa primero: si falta BYOK o cae el proveedor, lanza ANTES de tocar el estado.
@@ -126,6 +120,14 @@ export class AgenteService {
       tokensEntrada: resultado.tokensEntrada ?? 0,
       tokensSalida: resultado.tokensSalida ?? 0,
     };
+  }
+
+  /** `true` si la entrevista ya está puntuada con el hash vigente (idempotencia, RF-22c). */
+  private estaAlDia(entrevista: Entrevista, hash: string): boolean {
+    return (
+      entrevista.estadoScoring === 'puntuada' &&
+      entrevista.score?.hashEntrada === hash
+    );
   }
 
   /**

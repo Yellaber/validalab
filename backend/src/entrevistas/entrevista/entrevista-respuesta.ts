@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { esquemaPaginado } from '../../common/pagination/paginado.schema';
 import { Entrevista } from './entrevista.entity';
 import {
   ajusteScoreSchema,
@@ -33,15 +34,9 @@ export class EntrevistaRespuestaDto extends createZodDto(
 ) {}
 
 /** Página de entrevistas (esquema `EntrevistasPaginadas`). */
-export const entrevistasPaginadasSchema = z.object({
-  datos: z.array(entrevistaRespuestaSchema),
-  paginacion: z.object({
-    pagina: z.number().int(),
-    porPagina: z.number().int(),
-    total: z.number().int(),
-    totalPaginas: z.number().int(),
-  }),
-});
+export const entrevistasPaginadasSchema = esquemaPaginado(
+  entrevistaRespuestaSchema,
+);
 export class EntrevistasPaginadasDto extends createZodDto(
   entrevistasPaginadasSchema,
 ) {}

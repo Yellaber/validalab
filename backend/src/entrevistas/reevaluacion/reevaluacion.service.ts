@@ -12,16 +12,14 @@ import { AppConfigService } from '../../config/app-config.service';
 import { IdeasService } from '../../ideas/idea/ideas.service';
 import { ConfiguracionService } from '../../proveedores/configuracion/configuracion.service';
 import { PrecioModelo } from '../../proveedores/precios/precio-modelo.entity';
+import { costoDe } from '../../proveedores/precios/precio.util';
 import { PreciosService } from '../../proveedores/precios/precios.service';
+import { ACLARACION_COSTO } from '../../proveedores/precios/precios-respuesta';
 import { Entrevista } from '../entrevista/entrevista.entity';
 import {
   EstimacionReevaluacion,
   ResultadoReevaluacion,
 } from './reevaluacion-respuesta';
-
-/** Aclaración de que es un estimado del consumo vía ValidaLab, no el saldo. */
-const ACLARACION =
-  'Es un estimado previo a la ejecución del consumo de IA vía ValidaLab, calculado desde el promedio histórico de tokens y la tabla de precios. NO es el saldo de tu cuenta del proveedor.';
 
 /**
  * Re-evaluación en lote de las entrevistas de una idea tras un cambio de rúbrica
@@ -80,7 +78,7 @@ export class ReevaluacionService {
       tokensEntradaEstimados,
       tokensSalidaEstimados,
       esEstimado: true,
-      aclaracion: ACLARACION,
+      aclaracion: ACLARACION_COSTO,
     };
   }
 
@@ -200,7 +198,7 @@ export class ReevaluacionService {
     };
   }
 
-  /** Costo = tokens × precio del modelo. Sin precio catalogado → 0. */
+  /** Costo del lote: delega la fórmula en `PreciosService`. Sin precio catalogado → 0. */
   private costo(
     proveedor: string,
     modelo: string,
@@ -212,9 +210,6 @@ export class ReevaluacionService {
     if (!precio) {
       return 0;
     }
-    return (
-      (tokensEntrada / 1_000_000) * precio.precioEntradaPorMillon +
-      (tokensSalida / 1_000_000) * precio.precioSalidaPorMillon
-    );
+    return costoDe(precio, tokensEntrada, tokensSalida);
   }
 }

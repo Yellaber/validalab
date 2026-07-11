@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { esquemaPaginado } from '../common/pagination/paginado.schema';
 import { Contacto } from './contacto.entity';
 import {
   canalContactoSchema,
@@ -36,15 +37,9 @@ export class ContactoRespuestaDto extends createZodDto(
 ) {}
 
 /** Página de contactos (esquema `ContactosPaginados`). */
-export const contactosPaginadosSchema = z.object({
-  datos: z.array(contactoRespuestaSchema),
-  paginacion: z.object({
-    pagina: z.number().int(),
-    porPagina: z.number().int(),
-    total: z.number().int(),
-    totalPaginas: z.number().int(),
-  }),
-});
+export const contactosPaginadosSchema = esquemaPaginado(
+  contactoRespuestaSchema,
+);
 export class ContactosPaginadosDto extends createZodDto(
   contactosPaginadosSchema,
 ) {}
