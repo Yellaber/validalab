@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Contacto } from '../contactos/contacto.entity';
-import { Entrevista } from '../entrevistas/entrevista/entrevista.entity';
-import { IdeasService } from '../ideas/idea/ideas.service';
-import { UmbralesService } from '../ideas/umbral/umbrales.service';
+import { Contacto } from '../../contactos/contacto.entity';
+import { Entrevista } from '../../entrevistas/entrevista/entrevista.entity';
+import { IdeasService } from '../../ideas/idea/ideas.service';
+import { UmbralesService } from '../../ideas/umbral/umbrales.service';
 import { calcularValoresKpi } from './formulas-kpi';
 import { KpiCalculado, resumirTablero, TableroIdea } from './kpis-respuesta';
-import { determinarZona } from './zona-kpi';
+import { determinarZona } from '../zona-kpi';
 
 /**
  * Motor de KPIs (SRS §7, E5). Calcula el tablero de una idea AL VUELO desde sus

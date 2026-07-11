@@ -8,9 +8,9 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { OwnerId } from '../auth/decorators/usuario-actual.decorator';
-import { ErrorRespuestaDto } from '../common/errors/error-respuesta.dto';
-import { IdIdeaParamDto } from '../ideas/idea/ideas.dto';
+import { OwnerId } from '../../auth/decorators/usuario-actual.decorator';
+import { ErrorRespuestaDto } from '../../common/errors/error-respuesta.dto';
+import { IdIdeaParamDto } from '../../ideas/idea/ideas.dto';
 import { TableroIdea, TableroIdeaDto } from './kpis-respuesta';
 import { KpisService } from './kpis.service';
 

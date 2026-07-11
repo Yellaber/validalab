@@ -1,11 +1,11 @@
 import { Repository } from 'typeorm';
-import { AccesoDenegadoException } from '../common/errors/dominio.exception';
-import { Contacto } from '../contactos/contacto.entity';
-import { Entrevista } from '../entrevistas/entrevista/entrevista.entity';
-import { IdeasService } from '../ideas/idea/ideas.service';
-import { CATALOGO_KPI, KPIS } from '../ideas/umbral/kpi.catalog';
-import { UmbralRespuesta } from '../ideas/umbral/umbral-respuesta';
-import { UmbralesService } from '../ideas/umbral/umbrales.service';
+import { AccesoDenegadoException } from '../../common/errors/dominio.exception';
+import { Contacto } from '../../contactos/contacto.entity';
+import { Entrevista } from '../../entrevistas/entrevista/entrevista.entity';
+import { IdeasService } from '../../ideas/idea/ideas.service';
+import { CATALOGO_KPI, KPIS } from '../../ideas/umbral/kpi.catalog';
+import { UmbralRespuesta } from '../../ideas/umbral/umbral-respuesta';
+import { UmbralesService } from '../../ideas/umbral/umbrales.service';
 import { KpisService } from './kpis.service';
 
 const OWNER = 'owner-1';

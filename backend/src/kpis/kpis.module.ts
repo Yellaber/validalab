@@ -3,20 +3,36 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Contacto } from '../contactos/contacto.entity';
 import { Entrevista } from '../entrevistas/entrevista/entrevista.entity';
 import { IdeasModule } from '../ideas/ideas.module';
-import { KpisController } from './kpis.controller';
-import { KpisService } from './kpis.service';
+import { AlertaKpi } from './alertas/alerta-kpi.entity';
+import { AlertasController } from './alertas/alertas.controller';
+import { AlertasService } from './alertas/alertas.service';
+import { EstadoSemaforoKpi } from './alertas/estado-semaforo-kpi.entity';
+import { KpisController } from './tablero/kpis.controller';
+import { KpisService } from './tablero/kpis.service';
 
 /**
- * Módulo de dominio `kpis` (E5): el tablero de decisión. Calcula los 14 KPIs de
- * una idea al vuelo desde sus entrevistas y contactos (reconstruible, RNF-15).
- * Consume el repo de `Entrevista` y `Contacto` DIRECTAMENTE (solo lectura) e
- * importa `IdeasModule` para el aislamiento (`IdeasService`) y los umbrales
- * vigentes (`UmbralesService`). Reutiliza la fundación: guard global, `@OwnerId()`
- * y el sobre `Error`.
+ * Módulo de dominio `kpis` (E5), con dos sub-dominios:
+ * - `tablero/`: el cálculo al vuelo de los 14 KPIs de una idea (reconstruible,
+ *   RNF-15) expuesto en `GET /ideas/{id}/kpis`.
+ * - `alertas/`: la generación dirigida por evento de alertas de cruce de umbral
+ *   (tras un scoring) y su consulta. `zona-kpi` es el tipo compartido en la raíz.
+ *
+ * Consume los repos de `Entrevista`/`Contacto` (solo lectura) e importa
+ * `IdeasModule` (aislamiento + umbrales vigentes). Exporta `AlertasService` para
+ * que la capa agéntica dispare la evaluación al completar un scoring.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Entrevista, Contacto]), IdeasModule],
-  controllers: [KpisController],
-  providers: [KpisService],
+  imports: [
+    TypeOrmModule.forFeature([
+      Entrevista,
+      Contacto,
+      AlertaKpi,
+      EstadoSemaforoKpi,
+    ]),
+    IdeasModule,
+  ],
+  controllers: [KpisController, AlertasController],
+  providers: [KpisService, AlertasService],
+  exports: [AlertasService],
 })
 export class KpisModule {}

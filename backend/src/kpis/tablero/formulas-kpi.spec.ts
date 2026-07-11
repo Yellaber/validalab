@@ -1,6 +1,6 @@
-import { Contacto } from '../contactos/contacto.entity';
-import { Entrevista } from '../entrevistas/entrevista/entrevista.entity';
-import { SenalesEstructuradas } from '../entrevistas/entrevista/entrevista.types';
+import { Contacto } from '../../contactos/contacto.entity';
+import { Entrevista } from '../../entrevistas/entrevista/entrevista.entity';
+import { SenalesEstructuradas } from '../../entrevistas/entrevista/entrevista.types';
 import { calcularValoresKpi, DatosCalculo } from './formulas-kpi';
 
 const SIN_SENAL: SenalesEstructuradas = {

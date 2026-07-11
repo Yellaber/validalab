@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Entrevista } from '../entrevistas/entrevista/entrevista.entity';
 import { IdeasModule } from '../ideas/ideas.module';
+import { KpisModule } from '../kpis/kpis.module';
 import { ProveedoresModule } from '../proveedores/proveedores.module';
 import { EjecucionAgente } from './ejecucion/ejecucion-agente.entity';
 import { ModeloDeChatFactory } from './proveedor/modelo-chat.factory';
@@ -20,6 +21,7 @@ import { AgenteService } from './scoring/agente.service';
     TypeOrmModule.forFeature([EjecucionAgente, Entrevista]),
     IdeasModule,
     ProveedoresModule,
+    KpisModule,
   ],
   providers: [AgenteService, ModeloDeChatFactory],
   exports: [AgenteService],

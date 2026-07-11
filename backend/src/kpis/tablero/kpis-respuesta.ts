@@ -4,8 +4,8 @@ import {
   kpiGrupoSchema,
   kpiSchema,
   unidadKpiSchema,
-} from '../ideas/umbral/kpi.catalog';
-import { zonaKpiSchema } from './zona-kpi';
+} from '../../ideas/umbral/kpi.catalog';
+import { zonaKpiSchema } from '../zona-kpi';
 
 /**
  * Esquemas de respuesta del tablero de KPIs (E5). Reproducen `KpiCalculado`,
