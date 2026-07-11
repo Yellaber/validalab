@@ -7,8 +7,11 @@ import { ConflictoException } from '../../common/errors/dominio.exception';
 import { ProveedorId } from '../../proveedores/catalogo/proveedor.types';
 import { ConfiguracionService } from '../../proveedores/configuracion/configuracion.service';
 
-/** Modelo de chat listo para el scoring, con sus metadatos de proveedor/modelo. */
-export interface ModeloScoring {
+/** Tarea del agente para la que se construye el modelo (elige scoring o veredicto). */
+export type TareaModelo = 'scoring' | 'veredicto';
+
+/** Modelo de chat listo para una tarea del agente, con sus metadatos. */
+export interface ModeloAgente {
   modelo: BaseChatModel;
   proveedor: ProveedorId;
   nombreModelo: string;
@@ -31,21 +34,21 @@ const ADAPTADORES: Record<ProveedorId, ConstructorModelo> = {
 };
 
 /**
- * Selecciona el modelo de IA para el scoring según la config BYOK del usuario
- * dueño de la idea: descifra la API key en el momento (nunca antes) y construye
- * el `BaseChatModel` del proveedor con su `modeloScoring`. Sin config BYOK →
- * `ConflictoException` (la captura la capa agéntica para marcar la entrevista
- * `fallida` sin romper el registro).
+ * Selecciona el modelo de IA para una tarea del agente (scoring o veredicto)
+ * según la config BYOK del usuario dueño de la idea: descifra la API key en el
+ * momento (nunca antes) y construye el `BaseChatModel` del proveedor con el
+ * modelo de esa tarea. Sin config BYOK → `ConflictoException` (la captura la capa
+ * agéntica para degradar sin romper el flujo).
  */
 @Injectable()
 export class ModeloDeChatFactory {
   constructor(private readonly configuracion: ConfiguracionService) {}
 
-  async crear(ownerId: string): Promise<ModeloScoring> {
-    const credencial = await this.configuracion.credencialParaScoring(ownerId);
+  async crear(ownerId: string, tarea: TareaModelo): Promise<ModeloAgente> {
+    const credencial = await this.configuracion.credencialPara(ownerId, tarea);
     if (!credencial) {
       throw new ConflictoException(
-        'No hay configuración BYOK: configura tu proveedor de IA antes de puntuar entrevistas.',
+        'No hay configuración BYOK: configura tu proveedor de IA antes de usar el agente.',
       );
     }
     const construir = ADAPTADORES[credencial.proveedor];

@@ -7,23 +7,29 @@ import { ProveedoresModule } from '../proveedores/proveedores.module';
 import { EjecucionAgente } from './ejecucion/ejecucion-agente.entity';
 import { ModeloDeChatFactory } from './proveedor/modelo-chat.factory';
 import { AgenteService } from './scoring/agente.service';
+import { Veredicto } from './veredicto/veredicto.entity';
+import { VeredictoController } from './veredicto/veredicto.controller';
+import { VeredictoService } from './veredicto/veredicto.service';
 
 /**
- * Módulo de infraestructura `agente` (E4-C / SRS §8): el Validador Inteligente.
- * Organizado por tipo técnico (`proveedor/`, `scoring/`, `ejecucion/`). Consume
- * el repo de `Entrevista` DIRECTAMENTE (no `EntrevistasModule`) para evitar la
- * dependencia circular con `entrevistas`, que es quien dispara el scoring.
- * Importa `IdeasModule` (tools de hipótesis/umbrales) y `ProveedoresModule` (la
- * credencial BYOK descifrada, RNF-06). Exporta `AgenteService` para el disparo.
+ * Módulo de infraestructura `agente` (SRS §8): el Validador Inteligente, con dos
+ * funciones organizadas por sub-dominio: `scoring/` (E4, automático al guardar) y
+ * `veredicto/` (E6, bajo demanda), sobre la fundación compartida `comun/`
+ * (runner del grafo) y `proveedor/` (adaptador RNF-06). Consume el repo de
+ * `Entrevista` DIRECTAMENTE (evita el ciclo con `entrevistas`). Importa
+ * `IdeasModule` (tools + fijar estado por veredicto), `ProveedoresModule` (la
+ * credencial BYOK) y `KpisModule` (tablero para el snapshot y alertas). Exporta
+ * `AgenteService` para el disparo del scoring desde `entrevistas`.
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EjecucionAgente, Entrevista]),
+    TypeOrmModule.forFeature([EjecucionAgente, Entrevista, Veredicto]),
     IdeasModule,
     ProveedoresModule,
     KpisModule,
   ],
-  providers: [AgenteService, ModeloDeChatFactory],
+  controllers: [VeredictoController],
+  providers: [AgenteService, ModeloDeChatFactory, VeredictoService],
   exports: [AgenteService],
 })
 export class AgenteModule {}

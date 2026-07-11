@@ -109,8 +109,10 @@ export class AgenteService {
     ownerId: string,
     entrevista: Entrevista,
   ): Promise<SalidaEjecucion> {
-    const { modelo, proveedor, nombreModelo } =
-      await this.factory.crear(ownerId);
+    const { modelo, proveedor, nombreModelo } = await this.factory.crear(
+      ownerId,
+      'scoring',
+    );
     const tools = crearToolsDominio(
       {
         hipotesis: this.hipotesis,

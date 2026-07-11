@@ -76,3 +76,13 @@ export class ProveedorNoDisponibleException extends ErrorDeDominio {
     super(CodigoError.PROVEEDOR_IA_NO_DISPONIBLE, mensaje);
   }
 }
+
+/**
+ * El agente no produjo una salida válida tras los reintentos (RF-AG-03). En una
+ * operación síncrona (el veredicto, E6) se traduce a `502 SALIDA_AGENTE_INVALIDA`.
+ */
+export class SalidaAgenteInvalidaException extends ErrorDeDominio {
+  constructor(mensaje = 'El agente no produjo una salida válida.') {
+    super(CodigoError.SALIDA_AGENTE_INVALIDA, mensaje);
+  }
+}

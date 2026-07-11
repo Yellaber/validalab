@@ -66,12 +66,15 @@ export class ConfiguracionService {
   }
 
   /**
-   * Devuelve la credencial descifrada para el scoring de una idea propia: el
-   * proveedor y el `modeloScoring` configurados y la API key en claro. Es de uso
-   * INTERNO (la consume la capa agéntica, RNF-06); NUNCA se expone por HTTP. Sin
-   * config BYOK → `null` (el llamador decide cómo degradar).
+   * Devuelve la credencial descifrada para una tarea del agente de una idea
+   * propia: el proveedor, el modelo de esa tarea (`modeloScoring` o
+   * `modeloVeredicto`) y la API key en claro. Es de uso INTERNO (la consume la
+   * capa agéntica, RNF-06); NUNCA se expone por HTTP. Sin config BYOK → `null`.
    */
-  async credencialParaScoring(ownerId: string): Promise<{
+  async credencialPara(
+    ownerId: string,
+    tarea: 'scoring' | 'veredicto',
+  ): Promise<{
     proveedor: ProveedorId;
     modelo: string;
     apiKey: string;
@@ -82,7 +85,8 @@ export class ConfiguracionService {
     }
     return {
       proveedor: config.proveedor,
-      modelo: config.modeloScoring,
+      modelo:
+        tarea === 'scoring' ? config.modeloScoring : config.modeloVeredicto,
       apiKey: this.cifrado.descifrar(config.apiKeyCifrada),
     };
   }
