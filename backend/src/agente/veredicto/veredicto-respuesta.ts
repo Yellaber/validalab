@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { esquemaPaginado } from '../../common/pagination/paginado.schema';
 import { kpiCalculadoSchema } from '../../kpis/tablero/kpis-respuesta';
 import { Veredicto } from './veredicto.entity';
 import {
@@ -34,15 +35,9 @@ export class VeredictoRespuestaDto extends createZodDto(
 ) {}
 
 /** Página de veredictos (esquema `VeredictosPaginados`). */
-export const veredictosPaginadosSchema = z.object({
-  datos: z.array(veredictoRespuestaSchema),
-  paginacion: z.object({
-    pagina: z.number().int(),
-    porPagina: z.number().int(),
-    total: z.number().int(),
-    totalPaginas: z.number().int(),
-  }),
-});
+export const veredictosPaginadosSchema = esquemaPaginado(
+  veredictoRespuestaSchema,
+);
 export class VeredictosPaginadosDto extends createZodDto(
   veredictosPaginadosSchema,
 ) {}

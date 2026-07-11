@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { esquemaPaginado } from '../../common/pagination/paginado.schema';
 import { Usuario } from './usuario.entity';
 import { estadoUsuarioSchema, rolSchema } from './usuario.types';
 
@@ -35,15 +36,7 @@ export type TokenRespuesta = z.infer<typeof tokenRespuestaSchema>;
 export class TokenRespuestaDto extends createZodDto(tokenRespuestaSchema) {}
 
 /** Página de cuentas (esquema `UsuariosPaginados`), para el listado de admin. */
-export const usuariosPaginadosSchema = z.object({
-  datos: z.array(usuarioRespuestaSchema),
-  paginacion: z.object({
-    pagina: z.number().int(),
-    porPagina: z.number().int(),
-    total: z.number().int(),
-    totalPaginas: z.number().int(),
-  }),
-});
+export const usuariosPaginadosSchema = esquemaPaginado(usuarioRespuestaSchema);
 export class UsuariosPaginadosDto extends createZodDto(
   usuariosPaginadosSchema,
 ) {}

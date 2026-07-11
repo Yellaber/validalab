@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { esquemaPaginado } from '../../common/pagination/paginado.schema';
 import { Idea } from './idea.entity';
 import { estadoIdeaSchema } from './idea.types';
 
@@ -27,15 +28,7 @@ export type IdeaRespuesta = z.infer<typeof ideaRespuestaSchema>;
 export class IdeaRespuestaDto extends createZodDto(ideaRespuestaSchema) {}
 
 /** Página de ideas (esquema `IdeasPaginadas`: sobre `RespuestaPaginada` de `Idea`). */
-export const ideasPaginadasSchema = z.object({
-  datos: z.array(ideaRespuestaSchema),
-  paginacion: z.object({
-    pagina: z.number().int(),
-    porPagina: z.number().int(),
-    total: z.number().int(),
-    totalPaginas: z.number().int(),
-  }),
-});
+export const ideasPaginadasSchema = esquemaPaginado(ideaRespuestaSchema);
 export class IdeasPaginadasDto extends createZodDto(ideasPaginadasSchema) {}
 
 /**

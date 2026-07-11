@@ -1,5 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { esquemaPaginado } from '../../common/pagination/paginado.schema';
 import { kpiSchema } from '../../ideas/umbral/kpi.catalog';
 import { AlertaKpi } from './alerta-kpi.entity';
 
@@ -23,15 +24,7 @@ export class AlertaKpiRespuestaDto extends createZodDto(
 ) {}
 
 /** Página de alertas (esquema `AlertasPaginadas`). */
-export const alertasPaginadasSchema = z.object({
-  datos: z.array(alertaKpiRespuestaSchema),
-  paginacion: z.object({
-    pagina: z.number().int(),
-    porPagina: z.number().int(),
-    total: z.number().int(),
-    totalPaginas: z.number().int(),
-  }),
-});
+export const alertasPaginadasSchema = esquemaPaginado(alertaKpiRespuestaSchema);
 export class AlertasPaginadasDto extends createZodDto(alertasPaginadasSchema) {}
 
 /** Mapea la entidad `AlertaKpi` al recurso del contrato. */
