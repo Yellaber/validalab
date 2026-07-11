@@ -65,8 +65,9 @@ export const envSchema = z.object({
   // Reintentos ante una salida que no cumple el esquema Zod antes de fallar.
   AGENTE_MAX_REINTENTOS: z.coerce.number().int().min(0).default(2),
   // Versión de la rúbrica de scoring; participa en el hash de idempotencia.
-  // Súbela para invalidar todos los scores previos sin tocar datos.
-  SCORING_VERSION_RUBRICA: z.string().min(1).default('v1'),
+  // Súbela para invalidar todos los scores previos sin tocar datos. `v2` añade
+  // las señales estructuradas por entrevista que alimentan los KPIs de señal (E5).
+  SCORING_VERSION_RUBRICA: z.string().min(1).default('v2'),
 });
 
 /** Configuración del entorno ya validada y con tipos derivados. */

@@ -18,6 +18,13 @@ const params = (modelo: BaseChatModel, maxReintentos: number) => ({
   maxReintentos,
 });
 
+const senalesEstructuradas = {
+  dolorConfirmado: true,
+  dolorUrgente: false,
+  sinSolucionActual: true,
+  disposicionPago: false,
+};
+
 describe('extraerSalidaEstructurada', () => {
   it('devuelve la salida válida a la primera', async () => {
     const modelo = modeloConSalidas({
@@ -25,18 +32,26 @@ describe('extraerSalidaEstructurada', () => {
       justificacion: 'ok',
       senales: ['dolor real'],
       confianza: 70,
+      senalesEstructuradas,
     });
 
     const salida = await extraerSalidaEstructurada(params(modelo, 2));
 
     expect(salida.score).toBe(8);
     expect(salida.confianza).toBe(70);
+    expect(salida.senalesEstructuradas.dolorConfirmado).toBe(true);
   });
 
   it('reintenta ante una salida inválida y acaba devolviendo la válida', async () => {
     const modelo = modeloConSalidas(
       { score: 99, justificacion: 'x', senales: [], confianza: 50 }, // score fuera de rango
-      { score: 6, justificacion: 'ok', senales: [], confianza: 40 },
+      {
+        score: 6,
+        justificacion: 'ok',
+        senales: [],
+        confianza: 40,
+        senalesEstructuradas,
+      },
     );
 
     const salida = await extraerSalidaEstructurada(params(modelo, 2));
