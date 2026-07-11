@@ -220,6 +220,7 @@ export class AgenteService {
     try {
       await this.ejecuciones.save(
         this.ejecuciones.create({
+          ideaId: entrevista.ideaId,
           entrevistaId: entrevista.id,
           ownerId,
           tarea: 'scoring',
@@ -255,6 +256,7 @@ export class AgenteService {
   ): Promise<void> {
     await this.ejecuciones.save(
       this.ejecuciones.create({
+        ideaId: entrevista.ideaId,
         entrevistaId: entrevista.id,
         ownerId,
         tarea: 'scoring',

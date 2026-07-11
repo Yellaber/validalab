@@ -18,6 +18,10 @@ import { UmbralesService } from '../../ideas/umbral/umbrales.service';
 import { TableroIdea } from '../../kpis/tablero/kpis-respuesta';
 import { KpisService } from '../../kpis/tablero/kpis.service';
 import { AppConfigService } from '../../config/app-config.service';
+import {
+  EjecucionAgente,
+  ModoAgente,
+} from '../ejecucion/ejecucion-agente.entity';
 import { ejecutarAgente } from '../comun/ejecutar-agente';
 import { ModeloDeChatFactory } from '../proveedor/modelo-chat.factory';
 import { salidaVeredictoSchema, SalidaVeredicto } from './esquema-veredicto';
@@ -27,11 +31,15 @@ import { Veredicto } from './veredicto.entity';
 import { aVeredictoDto, VeredictoRespuesta } from './veredicto-respuesta';
 import { VerificarVeredictoDto, ListarVeredictosQuery } from './veredicto.dto';
 
-/** Salida de un intento de veredicto (real o fake) antes de persistir. */
+/** Salida de un intento de veredicto (real o fake) antes de persistir, con su telemetría. */
 interface EmisionVeredicto {
   salida: SalidaVeredicto;
   proveedor: string;
   modelo: string;
+  modo: ModoAgente;
+  iteraciones: number;
+  tokensEntrada: number | null;
+  tokensSalida: number | null;
 }
 
 /**
@@ -45,6 +53,8 @@ export class VeredictoService {
   constructor(
     @InjectRepository(Veredicto)
     private readonly veredictos: Repository<Veredicto>,
+    @InjectRepository(EjecucionAgente)
+    private readonly ejecuciones: Repository<EjecucionAgente>,
     private readonly kpis: KpisService,
     private readonly factory: ModeloDeChatFactory,
     private readonly hipotesis: HipotesisService,
@@ -80,7 +90,38 @@ export class VeredictoService {
       estadoVerificacion: 'pendiente',
       verificacion: null,
     });
-    return aVeredictoDto(await this.veredictos.save(veredicto));
+    const guardado = await this.veredictos.save(veredicto);
+    await this.registrarEjecucion(ownerId, ideaId, emision);
+    return aVeredictoDto(guardado);
+  }
+
+  /**
+   * Deja la traza de la emisión en el ledger único `ejecuciones_agente`
+   * (`tarea: veredicto`, sin entrevista), completando la trazabilidad del
+   * veredicto (RF-AG-08) y sirviendo de fuente del costo estimado (E8).
+   */
+  private async registrarEjecucion(
+    ownerId: string,
+    ideaId: string,
+    emision: EmisionVeredicto,
+  ): Promise<void> {
+    await this.ejecuciones.save(
+      this.ejecuciones.create({
+        ideaId,
+        entrevistaId: null,
+        ownerId,
+        tarea: 'veredicto',
+        modo: emision.modo,
+        proveedor: emision.proveedor,
+        modelo: emision.modelo,
+        estado: 'exitosa',
+        iteraciones: emision.iteraciones,
+        tokensEntrada: emision.tokensEntrada,
+        tokensSalida: emision.tokensSalida,
+        salida: emision.salida,
+        error: null,
+      }),
+    );
   }
 
   /** Invoca al agente real contra el proveedor BYOK; mapea los errores a 409/502/503. */
@@ -110,7 +151,15 @@ export class VeredictoService {
         maxReintentos,
         timeoutMs,
       });
-      return { salida: resultado.salida, proveedor, modelo: nombreModelo };
+      return {
+        salida: resultado.salida,
+        proveedor,
+        modelo: nombreModelo,
+        modo: 'real',
+        iteraciones: resultado.iteraciones,
+        tokensEntrada: resultado.tokensEntrada,
+        tokensSalida: resultado.tokensSalida,
+      };
     } catch (error) {
       const motivo = error instanceof Error ? error.message : String(error);
       if (/no produjo una salida válida/.test(motivo)) {
@@ -152,6 +201,10 @@ export class VeredictoService {
       },
       proveedor: 'fake',
       modelo: 'fake',
+      modo: 'fake',
+      iteraciones: 0,
+      tokensEntrada: null,
+      tokensSalida: null,
     };
   }
 
