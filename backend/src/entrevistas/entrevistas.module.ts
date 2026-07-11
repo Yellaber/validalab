@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AgenteModule } from '../agente/agente.module';
 import { ContactosModule } from '../contactos/contactos.module';
 import { IdeasModule } from '../ideas/ideas.module';
 import { Entrevista } from './entrevista/entrevista.entity';
@@ -17,15 +18,16 @@ import { GuionesService } from './guion/guiones.service';
  *
  * Depende de `ideas` (asegurarPropia) y `contactos` (validar el contacto de la
  * idea + marcarlo `entrevistado`), importados vía sus módulos; el guión se
- * reutiliza dentro del propio módulo. El scoring por IA (agente) llega en un
- * chunk posterior, tras adelantar BYOK. Reutiliza la fundación: guard global,
- * `@OwnerId()`, paginación y el sobre `Error`.
+ * reutiliza dentro del propio módulo. Importa `AgenteModule` para disparar el
+ * scoring por IA de forma asíncrona al guardar/editar respuestas (E4-C).
+ * Reutiliza la fundación: guard global, `@OwnerId()`, paginación y el sobre `Error`.
  */
 @Module({
   imports: [
     TypeOrmModule.forFeature([Guion, Entrevista]),
     IdeasModule,
     ContactosModule,
+    AgenteModule,
   ],
   controllers: [GuionesController, EntrevistasController],
   providers: [GuionesService, EntrevistasService],

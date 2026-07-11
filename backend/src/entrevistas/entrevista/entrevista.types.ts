@@ -15,8 +15,17 @@ export const citaSchema = z.object({
 });
 export type Cita = z.infer<typeof citaSchema>;
 
-/** Estado del scoring del agente sobre la entrevista (`EstadoScoring`). */
-export const estadoScoringSchema = z.enum(['pendiente', 'puntuada', 'fallida']);
+/**
+ * Estado del scoring del agente sobre la entrevista (`EstadoScoring`). Nace
+ * `pendiente`; al dispararse el agente pasa a `procesando` y termina en
+ * `puntuada` (con `score`) o `fallida`.
+ */
+export const estadoScoringSchema = z.enum([
+  'pendiente',
+  'procesando',
+  'puntuada',
+  'fallida',
+]);
 export type EstadoScoring = z.infer<typeof estadoScoringSchema>;
 
 /**

@@ -10,6 +10,7 @@ import {
   crearRespuestaPaginada,
   RespuestaPaginada,
 } from '../../common/pagination/respuesta-paginada';
+import { AgenteService } from '../../agente/scoring/agente.service';
 import { ContactosService } from '../../contactos/contactos.service';
 import { IdeasService } from '../../ideas/idea/ideas.service';
 import { GuionesService } from '../guion/guiones.service';
@@ -35,7 +36,20 @@ export class EntrevistasService {
     private readonly ideas: IdeasService,
     private readonly contactos: ContactosService,
     private readonly guiones: GuionesService,
+    private readonly agente: AgenteService,
   ) {}
+
+  /**
+   * Dispara el scoring del agente en segundo plano (fire-and-forget). No se hace
+   * `await`: la latencia del LLM no debe bloquear la respuesta HTTP. El propio
+   * `AgenteService` captura sus errores y deja la entrevista `fallida`; el
+   * `.catch` es una red de seguridad para que nada escape al flujo del request.
+   */
+  private dispararScoring(ownerId: string, entrevista: Entrevista): void {
+    void this.agente
+      .solicitarScoring(ownerId, entrevista)
+      .catch(() => undefined);
+  }
 
   /**
    * Registra una entrevista de una idea propia. Valida el vínculo (contacto de
@@ -72,6 +86,7 @@ export class EntrevistasService {
     });
     const guardada = await this.entrevistas.save(entrevista);
     await this.contactos.marcarEntrevistado(contacto);
+    this.dispararScoring(ownerId, guardada);
     return aEntrevistaDto(guardada);
   }
 
@@ -128,6 +143,7 @@ export class EntrevistasService {
   ): Promise<EntrevistaRespuesta> {
     await this.ideas.asegurarPropia(ownerId, ideaId);
     const entrevista = await this.buscarEnIdea(ideaId, idEntrevista);
+    const respuestasCambiaron = datos.respuestas !== undefined;
     if (datos.respuestas !== undefined) {
       entrevista.respuestas = datos.respuestas;
       entrevista.estadoScoring = 'pendiente';
@@ -136,7 +152,12 @@ export class EntrevistasService {
     if (datos.citas !== undefined) {
       entrevista.citas = this.citasConIds(datos.citas);
     }
-    return aEntrevistaDto(await this.entrevistas.save(entrevista));
+    const guardada = await this.entrevistas.save(entrevista);
+    // Cambiar las respuestas re-dispara el scoring; editar solo citas no.
+    if (respuestasCambiaron) {
+      this.dispararScoring(ownerId, guardada);
+    }
+    return aEntrevistaDto(guardada);
   }
 
   /** Elimina una entrevista propia. Idea ajena → 403; inexistente → 404. */
