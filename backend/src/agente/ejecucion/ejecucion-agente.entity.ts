@@ -6,20 +6,20 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 
-/** Tarea del agente que originó la ejecución. Hoy solo `scoring` (E4); el veredicto (E6) reutilizará esta traza. */
-export type TareaAgente = 'scoring';
+/** Tarea del agente que originó la ejecución: scoring de entrevista (E4) o veredicto de idea (E6). */
+export type TareaAgente = 'scoring' | 'veredicto';
 /** Modo en que corrió la capa agéntica. */
 export type ModoAgente = 'real' | 'fake';
 /** Desenlace de la ejecución del agente. */
 export type EstadoEjecucion = 'exitosa' | 'fallida';
 
 /**
- * Traza de una ejecución del agente Validador Inteligente (RF-AG-08). Registra,
- * por cada intento de scoring de una entrevista, el modo, el proveedor/modelo
- * usados, el desenlace, las iteraciones, los tokens (cuando el proveedor los
- * reporta), la salida validada y el motivo de error. Es append-only y sirve de
- * base para la trazabilidad y el costo estimado (E8). No es un checkpointer de
- * LangGraph: es el registro de dominio de qué hizo el agente.
+ * Traza de CADA ejecución del agente Validador Inteligente (RF-AG-08), de
+ * cualquier tarea (scoring de entrevista o veredicto de idea). Registra la idea,
+ * la entrevista (cuando aplica; el veredicto no la tiene), el owner, el modo, el
+ * proveedor/modelo, el desenlace, las iteraciones, los tokens (cuando el
+ * proveedor los reporta), la salida validada y el motivo de error. Es append-only
+ * y la fuente ÚNICA reconstruible de la trazabilidad y del costo estimado (E8).
  */
 @Entity('ejecuciones_agente')
 export class EjecucionAgente {
@@ -27,8 +27,12 @@ export class EjecucionAgente {
   id!: string;
 
   @Index()
-  @Column({ name: 'entrevista_id', type: 'uuid' })
-  entrevistaId!: string;
+  @Column({ name: 'idea_id', type: 'uuid', nullable: true })
+  ideaId!: string | null;
+
+  @Index()
+  @Column({ name: 'entrevista_id', type: 'uuid', nullable: true })
+  entrevistaId!: string | null;
 
   @Index()
   @Column({ name: 'owner_id', type: 'uuid' })

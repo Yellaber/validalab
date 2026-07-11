@@ -14,6 +14,7 @@ import { TableroIdea } from '../../kpis/tablero/kpis-respuesta';
 import { KpisService } from '../../kpis/tablero/kpis.service';
 import { ModeloDeChatFactory } from '../proveedor/modelo-chat.factory';
 import { ejecutarAgente } from '../comun/ejecutar-agente';
+import { EjecucionAgente } from '../ejecucion/ejecucion-agente.entity';
 import { Veredicto } from './veredicto.entity';
 import { VeredictoService } from './veredicto.service';
 
@@ -106,8 +107,13 @@ function crear(modo: 'real' | 'fake', tablero: TableroIdea = tableroDe(2, 0)) {
       versionRubrica: 'v2',
     },
   };
+  const ejecuciones = {
+    create: jest.fn((x: unknown) => x),
+    save: jest.fn((x: unknown) => Promise.resolve(x)),
+  };
   const servicio = new VeredictoService(
     veredictos as unknown as Repository<Veredicto>,
+    ejecuciones as unknown as Repository<EjecucionAgente>,
     kpis as unknown as KpisService,
     factory as unknown as ModeloDeChatFactory,
     {} as HipotesisService,
@@ -115,14 +121,17 @@ function crear(modo: 'real' | 'fake', tablero: TableroIdea = tableroDe(2, 0)) {
     ideas as unknown as IdeasService,
     config as unknown as AppConfigService,
   );
-  return { servicio, veredictos, kpis, factory, ideas };
+  return { servicio, veredictos, ejecuciones, kpis, factory, ideas };
 }
 
 beforeEach(() => ejecutarAgenteMock.mockReset());
 
 describe('VeredictoService.emitir (modo fake)', () => {
   it('deriva el veredicto del semáforo y persiste pendiente con snapshot', async () => {
-    const { servicio, veredictos } = crear('fake', tableroDe(0, 3)); // más kill que go
+    const { servicio, veredictos, ejecuciones } = crear(
+      'fake',
+      tableroDe(0, 3),
+    ); // más kill que go
 
     const dto = await servicio.emitir(OWNER, IDEA);
 
@@ -131,6 +140,15 @@ describe('VeredictoService.emitir (modo fake)', () => {
     expect(dto.proveedor).toBe('fake');
     expect(veredictos.create).toHaveBeenCalledWith(
       expect.objectContaining({ estadoVerificacion: 'pendiente' }),
+    );
+    // deja traza en el ledger único (tarea veredicto, sin entrevista)
+    expect(ejecuciones.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tarea: 'veredicto',
+        ideaId: IDEA,
+        entrevistaId: null,
+        ownerId: OWNER,
+      }),
     );
   });
 
