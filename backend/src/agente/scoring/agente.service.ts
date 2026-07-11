@@ -88,6 +88,47 @@ export class AgenteService {
   }
 
   /**
+   * Puntúa una entrevista de forma SÍNCRONA, para la re-evaluación en lote (E8b).
+   * A diferencia de `solicitarScoring` (asíncrono, que traga errores), devuelve el
+   * resultado y PROPAGA los errores (sin BYOK / proveedor caído) para que el lote
+   * reporte conteos y costo reales. Omite por idempotencia si el hash coincide
+   * (RF-22c). Tras re-puntuar, reevalúa las alertas de la idea (E5b).
+   */
+  async reevaluar(
+    ownerId: string,
+    entrevista: Entrevista,
+  ): Promise<{
+    reevaluada: boolean;
+    tokensEntrada: number;
+    tokensSalida: number;
+  }> {
+    const { versionRubrica, modo } = this.config.agente;
+    const hash = calcularHashScoring(entrevista.respuestas, versionRubrica);
+    if (
+      entrevista.estadoScoring === 'puntuada' &&
+      entrevista.score?.hashEntrada === hash
+    ) {
+      return { reevaluada: false, tokensEntrada: 0, tokensSalida: 0 };
+    }
+    // Puntúa primero: si falta BYOK o cae el proveedor, lanza ANTES de tocar el estado.
+    const resultado =
+      modo === 'fake'
+        ? this.puntuarFake(entrevista, hash)
+        : await this.puntuarReal(ownerId, entrevista);
+    await this.entrevistas.update(
+      { id: entrevista.id },
+      { estadoScoring: 'procesando' },
+    );
+    await this.finalizarPuntuada(ownerId, entrevista, hash, resultado);
+    await this.evaluarAlertas(ownerId, entrevista.ideaId);
+    return {
+      reevaluada: true,
+      tokensEntrada: resultado.tokensEntrada ?? 0,
+      tokensSalida: resultado.tokensSalida ?? 0,
+    };
+  }
+
+  /**
    * Dispara la evaluación de alertas de KPI tras un scoring exitoso (E5b). Nunca
    * propaga: un fallo aquí no debe marcar la entrevista `fallida` (el score ya se
    * persistió), solo se registra.

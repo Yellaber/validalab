@@ -55,8 +55,8 @@ import { PreciosService } from './precios/precios.service';
     PreciosService,
     CostoService,
   ],
-  // `ConfiguracionService` se exporta para que la capa agéntica (`agente`)
-  // obtenga la credencial descifrada del usuario (RNF-06 / BYOK).
-  exports: [ConfiguracionService],
+  // `ConfiguracionService` para la capa agéntica (credencial descifrada, RNF-06);
+  // `PreciosService` para la re-evaluación en lote (E8b), que estima costos.
+  exports: [ConfiguracionService, PreciosService],
 })
 export class ProveedoresModule {}

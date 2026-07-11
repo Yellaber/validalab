@@ -1,4 +1,5 @@
 import { Repository } from 'typeorm';
+import { ConflictoException } from '../../common/errors/dominio.exception';
 import { AppConfigService } from '../../config/app-config.service';
 import { Entrevista } from '../../entrevistas/entrevista/entrevista.entity';
 import { ScoreEntrevista } from '../../entrevistas/entrevista/entrevista.types';
@@ -177,5 +178,51 @@ describe('AgenteService.solicitarScoring (fallos)', () => {
     await expect(
       servicio.solicitarScoring(OWNER, entrevistaDe()),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('AgenteService.reevaluar (síncrono, E8b)', () => {
+  it('re-puntúa una entrevista con hash distinto y devuelve sus tokens', async () => {
+    const { servicio, alertas } = crear('fake');
+
+    const resultado = await servicio.reevaluar(OWNER, entrevistaDe());
+
+    expect(resultado.reevaluada).toBe(true);
+    expect(typeof resultado.tokensEntrada).toBe('number');
+    // tras re-puntuar, dispara la evaluación de alertas
+    expect(alertas.evaluarIdea).toHaveBeenCalledWith(OWNER, 'idea-1');
+  });
+
+  it('omite (reevaluada:false) si el hash coincide con el score vigente', async () => {
+    const { servicio, entrevistas } = crear('fake');
+    const respuestas = [{ preguntaId: 'p1', texto: 'igual' }];
+    const entrevista = entrevistaDe({
+      estadoScoring: 'puntuada',
+      respuestas,
+      score: {
+        score: 7,
+        justificacion: 'previo',
+        senales: [],
+        confianza: 80,
+        hashEntrada: calcularHashScoring(respuestas, VERSION),
+      },
+    });
+
+    const resultado = await servicio.reevaluar(OWNER, entrevista);
+
+    expect(resultado.reevaluada).toBe(false);
+    expect(entrevistas.update).not.toHaveBeenCalled();
+  });
+
+  it('propaga el error (sin BYOK) sin dejar la entrevista en procesando', async () => {
+    const factoryCrear = jest
+      .fn()
+      .mockRejectedValue(new ConflictoException('sin BYOK'));
+    const { servicio, entrevistas } = crear('real', factoryCrear);
+
+    await expect(
+      servicio.reevaluar(OWNER, entrevistaDe()),
+    ).rejects.toBeInstanceOf(ConflictoException);
+    expect(entrevistas.update).not.toHaveBeenCalled();
   });
 });
