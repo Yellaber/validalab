@@ -1,6 +1,6 @@
-import { Contacto } from '../contactos/contacto.entity';
-import { Entrevista } from '../entrevistas/entrevista/entrevista.entity';
-import { Kpi } from '../ideas/umbral/kpi.catalog';
+import { Contacto } from '../../contactos/contacto.entity';
+import { Entrevista } from '../../entrevistas/entrevista/entrevista.entity';
+import { Kpi } from '../../ideas/umbral/kpi.catalog';
 
 /** Valor calculado de un KPI, con numerador/denominador para transparencia. */
 export interface ResultadoKpi {

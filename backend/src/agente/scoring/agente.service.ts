@@ -6,6 +6,7 @@ import { Entrevista } from '../../entrevistas/entrevista/entrevista.entity';
 import { ScoreEntrevista } from '../../entrevistas/entrevista/entrevista.types';
 import { HipotesisService } from '../../ideas/hipotesis/hipotesis.service';
 import { UmbralesService } from '../../ideas/umbral/umbrales.service';
+import { AlertasService } from '../../kpis/alertas/alertas.service';
 import {
   EjecucionAgente,
   EstadoEjecucion,
@@ -48,6 +49,7 @@ export class AgenteService {
     private readonly hipotesis: HipotesisService,
     private readonly umbrales: UmbralesService,
     private readonly config: AppConfigService,
+    private readonly alertas: AlertasService,
   ) {}
 
   /**
@@ -79,8 +81,26 @@ export class AgenteService {
           ? this.puntuarFake(entrevista, hash)
           : await this.puntuarReal(ownerId, entrevista);
       await this.finalizarPuntuada(ownerId, entrevista, hash, resultado);
+      await this.evaluarAlertas(ownerId, entrevista.ideaId);
     } catch (error) {
       await this.finalizarFallida(ownerId, entrevista, error);
+    }
+  }
+
+  /**
+   * Dispara la evaluación de alertas de KPI tras un scoring exitoso (E5b). Nunca
+   * propaga: un fallo aquí no debe marcar la entrevista `fallida` (el score ya se
+   * persistió), solo se registra.
+   */
+  private async evaluarAlertas(ownerId: string, ideaId: string): Promise<void> {
+    try {
+      await this.alertas.evaluarIdea(ownerId, ideaId);
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron evaluar las alertas de la idea ${ideaId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 

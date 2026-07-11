@@ -4,6 +4,7 @@ import { Entrevista } from '../../entrevistas/entrevista/entrevista.entity';
 import { ScoreEntrevista } from '../../entrevistas/entrevista/entrevista.types';
 import { HipotesisService } from '../../ideas/hipotesis/hipotesis.service';
 import { UmbralesService } from '../../ideas/umbral/umbrales.service';
+import { AlertasService } from '../../kpis/alertas/alertas.service';
 import { EjecucionAgente } from '../ejecucion/ejecucion-agente.entity';
 import { ModeloDeChatFactory } from '../proveedor/modelo-chat.factory';
 import { AgenteService } from './agente.service';
@@ -68,6 +69,7 @@ function crear(modo: 'real' | 'fake', factoryCrear?: jest.Mock) {
       timeoutMs: 30000,
     },
   };
+  const alertas = { evaluarIdea: jest.fn().mockResolvedValue(undefined) };
   const servicio = new AgenteService(
     entrevistas as unknown as Repository<Entrevista>,
     ejecuciones as unknown as Repository<EjecucionAgente>,
@@ -75,16 +77,20 @@ function crear(modo: 'real' | 'fake', factoryCrear?: jest.Mock) {
     {} as HipotesisService,
     {} as UmbralesService,
     config as unknown as AppConfigService,
+    alertas as unknown as AlertasService,
   );
-  return { servicio, entrevistas, ejecuciones, factory };
+  return { servicio, entrevistas, ejecuciones, factory, alertas };
 }
 
 describe('AgenteService.solicitarScoring (modo fake)', () => {
   it('puntúa una entrevista y persiste el score y la traza', async () => {
-    const { servicio, entrevistas, ejecuciones } = crear('fake');
+    const { servicio, entrevistas, ejecuciones, alertas } = crear('fake');
     const entrevista = entrevistaDe();
 
     await servicio.solicitarScoring(OWNER, entrevista);
+
+    // tras puntuar, dispara la evaluación de alertas de la idea
+    expect(alertas.evaluarIdea).toHaveBeenCalledWith(OWNER, entrevista.ideaId);
 
     const updates = updatesDe(entrevistas);
     // primera actualización: procesando
