@@ -48,7 +48,7 @@ export class ServicioDeTokens {
     const sesion = this.sesiones.create({
       usuarioId,
       tokenHash: this.hashRefresh(token),
-      expiraEn: new Date(Date.now() + this.refreshTtlMs()),
+      expiraEn: new Date(Date.now() + this.config.session.refreshTtlMs),
     });
     await this.sesiones.save(sesion);
     return token;
@@ -96,22 +96,5 @@ export class ServicioDeTokens {
       throw new NoAutenticadoException('Refresh token inválido o expirado.');
     }
     return sesion;
-  }
-
-  private refreshTtlMs(): number {
-    const ttl = this.config.session.refreshTokenTtl.trim();
-    const m = /^(\d+)\s*(s|m|h|d)$/.exec(ttl);
-    if (!m) {
-      throw new Error(
-        `REFRESH_TOKEN_TTL inválido: "${ttl}" (usa p. ej. 30d, 12h).`,
-      );
-    }
-    const unidades: Record<string, number> = {
-      s: 1_000,
-      m: 60_000,
-      h: 3_600_000,
-      d: 86_400_000,
-    };
-    return Number(m[1]) * unidades[m[2]];
   }
 }
