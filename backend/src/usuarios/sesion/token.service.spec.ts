@@ -30,7 +30,7 @@ function crearServicio(repo: RepoMock): {
     signOptions: { expiresIn: '15m' },
   });
   const config = {
-    session: { refreshTokenTtl: '30d' },
+    session: { refreshTokenTtl: '30d', refreshTtlMs: 30 * 86_400_000 },
   } as AppConfigService;
   const servicio = new ServicioDeTokens(
     jwt,

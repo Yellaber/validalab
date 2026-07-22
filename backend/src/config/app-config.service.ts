@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { parsearTtlMs } from '../usuarios/sesion/ttl.util';
 import { Env } from './env.schema';
 
 /**
@@ -51,11 +52,26 @@ export class AppConfigService {
     };
   }
 
-  /** Configuración de la sesión (refresh token opaco). */
-  get session(): { refreshTokenTtl: string } {
-    return {
-      refreshTokenTtl: this.config.get('REFRESH_TOKEN_TTL', { infer: true }),
-    };
+  /** Configuración de la sesión (refresh token opaco), con el TTL ya en ms. */
+  get session(): { refreshTokenTtl: string; refreshTtlMs: number } {
+    const refreshTokenTtl = this.config.get('REFRESH_TOKEN_TTL', {
+      infer: true,
+    });
+    return { refreshTokenTtl, refreshTtlMs: parsearTtlMs(refreshTokenTtl) };
+  }
+
+  /** Atributos de seguridad de la cookie de refresh. */
+  get cookie(): { secure: boolean } {
+    return { secure: this.config.get('COOKIE_SECURE', { infer: true }) };
+  }
+
+  /** Orígenes permitidos por CORS (con credenciales). Lista no vacía. */
+  get corsOrigins(): string[] {
+    return this.config
+      .get('CORS_ORIGINS', { infer: true })
+      .split(',')
+      .map((o) => o.trim())
+      .filter((o) => o.length > 0);
   }
 
   /** Configuración BYOK: clave de cifrado de las API keys y flag de validación. */

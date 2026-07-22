@@ -24,16 +24,29 @@ export const usuarioRespuestaSchema = z.object({
 export type UsuarioRespuesta = z.infer<typeof usuarioRespuestaSchema>;
 export class UsuarioRespuestaDto extends createZodDto(usuarioRespuestaSchema) {}
 
-/** Tokens de sesión emitidos en login y refresh (esquema `TokenRespuesta`). */
+/**
+ * Cuerpo de sesión emitido en login y refresh (esquema `TokenRespuesta`). NO
+ * incluye el `refreshToken`: ese viaja en la cookie `HttpOnly`. El cliente usa el
+ * `accessToken` en `Authorization: Bearer` y lo mantiene en memoria.
+ */
 export const tokenRespuestaSchema = z.object({
   accessToken: z.string(),
-  refreshToken: z.string(),
   tokenTipo: z.literal('Bearer'),
   expiraEn: z.number().int(),
   usuario: usuarioRespuestaSchema,
 });
 export type TokenRespuesta = z.infer<typeof tokenRespuestaSchema>;
 export class TokenRespuestaDto extends createZodDto(tokenRespuestaSchema) {}
+
+/**
+ * Sesión emitida por el servicio: separa el `cuerpo` (JSON de respuesta, sin
+ * refresh) del `refreshToken` opaco, que el controlador coloca en la cookie
+ * `HttpOnly`. Así el servicio no depende del transporte HTTP y queda testeable.
+ */
+export interface SesionEmitida {
+  cuerpo: TokenRespuesta;
+  refreshToken: string;
+}
 
 /** Página de cuentas (esquema `UsuariosPaginados`), para el listado de admin. */
 export const usuariosPaginadosSchema = esquemaPaginado(usuarioRespuestaSchema);

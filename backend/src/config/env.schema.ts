@@ -35,8 +35,18 @@ export const envSchema = z.object({
 
   // --- Sesión / refresh token ---
   // Vigencia del refresh token opaco (se almacena hasheado). Formato de `ms`
-  // (p. ej. 30d, 12h).
+  // (p. ej. 30d, 12h). Fija también el `Max-Age` de la cookie de refresh.
   REFRESH_TOKEN_TTL: z.string().min(1).default('30d'),
+  // Flag `Secure` de la cookie de refresh: en producción DEBE ser `true` (solo
+  // HTTPS); en dev sobre `http://localhost` se pone `false` para que el navegador
+  // acepte la cookie.
+  COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Orígenes permitidos por CORS (separados por coma). Con credenciales (la cookie
+  // de refresh) el origen NO puede ser `*`: debe listarse explícitamente.
+  CORS_ORIGINS: z.string().min(1).default('http://localhost:4200'),
 
   // --- BYOK (configuración del proveedor de IA por usuario) ---
   // Clave AES-256 (32 bytes = 64 hex) para cifrar en reposo las API keys BYOK.

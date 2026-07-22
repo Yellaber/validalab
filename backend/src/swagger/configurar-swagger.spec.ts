@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
+import { AppConfigService } from '../config/app-config.service';
 import { UsuariosController } from '../usuarios/usuario/usuarios.controller';
 import { UsuariosService } from '../usuarios/usuario/usuarios.service';
 
@@ -17,7 +18,10 @@ describe('documento OpenAPI (usuarios)', () => {
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({
       controllers: [UsuariosController],
-      providers: [{ provide: UsuariosService, useValue: {} }],
+      providers: [
+        { provide: UsuariosService, useValue: {} },
+        { provide: AppConfigService, useValue: {} },
+      ],
     }).compile();
     app = modulo.createNestApplication();
     await app.init();

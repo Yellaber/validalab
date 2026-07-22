@@ -155,21 +155,23 @@ const credenciales: LoginDto = {
 };
 
 describe('UsuariosService.login', () => {
-  it('emite TokenRespuesta con credenciales válidas de una cuenta activa', async () => {
+  it('emite la sesión con credenciales válidas de una cuenta activa', async () => {
     const { servicio, repo, hashing, tokens } = crear();
     repo.findOne.mockResolvedValue(usuarioActivo());
     hashing.verificar.mockResolvedValue(true);
 
     const respuesta = await servicio.login(credenciales);
 
-    expect(respuesta.accessToken).toBe('AT');
+    // El refresh token va aparte (para la cookie), NO en el cuerpo de respuesta.
     expect(respuesta.refreshToken).toBe('RT');
-    expect(respuesta.tokenTipo).toBe('Bearer');
-    expect(respuesta.expiraEn).toBe(900);
-    expect(respuesta.usuario.id).toBe('u1');
-    expect(respuesta.usuario.email).toBe('ana@ejemplo.com');
+    expect(respuesta.cuerpo).not.toHaveProperty('refreshToken');
+    expect(respuesta.cuerpo.accessToken).toBe('AT');
+    expect(respuesta.cuerpo.tokenTipo).toBe('Bearer');
+    expect(respuesta.cuerpo.expiraEn).toBe(900);
+    expect(respuesta.cuerpo.usuario.id).toBe('u1');
+    expect(respuesta.cuerpo.usuario.email).toBe('ana@ejemplo.com');
     expect(tokens.emitirRefreshToken).toHaveBeenCalledWith('u1');
-    expect(respuesta.usuario).not.toHaveProperty('passwordHash');
+    expect(respuesta.cuerpo.usuario).not.toHaveProperty('passwordHash');
   });
 
   it('rechaza una contraseña incorrecta (NO_AUTENTICADO)', async () => {
@@ -204,7 +206,7 @@ describe('UsuariosService.login', () => {
 });
 
 describe('UsuariosService.refrescar', () => {
-  it('rota el refresh y emite tokens nuevos para una cuenta activa', async () => {
+  it('rota el refresh y emite una sesión nueva para una cuenta activa', async () => {
     const { servicio, repo, tokens } = crear();
     tokens.rotarRefreshToken.mockResolvedValue({
       usuarioId: 'u1',
@@ -212,21 +214,22 @@ describe('UsuariosService.refrescar', () => {
     });
     repo.findOne.mockResolvedValue(usuarioActivo());
 
-    const respuesta = await servicio.refrescar({ refreshToken: 'viejo' });
+    const respuesta = await servicio.refrescar('viejo');
 
     expect(tokens.rotarRefreshToken).toHaveBeenCalledWith('viejo');
     expect(respuesta.refreshToken).toBe('RT2');
-    expect(respuesta.accessToken).toBe('AT');
-    expect(respuesta.tokenTipo).toBe('Bearer');
+    expect(respuesta.cuerpo).not.toHaveProperty('refreshToken');
+    expect(respuesta.cuerpo.accessToken).toBe('AT');
+    expect(respuesta.cuerpo.tokenTipo).toBe('Bearer');
   });
 
   it('propaga el rechazo de un refresh inválido', async () => {
     const { servicio, tokens } = crear();
     tokens.rotarRefreshToken.mockRejectedValue(new NoAutenticadoException());
 
-    await expect(
-      servicio.refrescar({ refreshToken: 'malo' }),
-    ).rejects.toBeInstanceOf(NoAutenticadoException);
+    await expect(servicio.refrescar('malo')).rejects.toBeInstanceOf(
+      NoAutenticadoException,
+    );
   });
 
   it('rechaza si la cuenta quedó suspendida', async () => {
@@ -237,9 +240,9 @@ describe('UsuariosService.refrescar', () => {
     });
     repo.findOne.mockResolvedValue(usuarioActivo({ estado: 'suspendido' }));
 
-    await expect(
-      servicio.refrescar({ refreshToken: 'viejo' }),
-    ).rejects.toBeInstanceOf(NoAutenticadoException);
+    await expect(servicio.refrescar('viejo')).rejects.toBeInstanceOf(
+      NoAutenticadoException,
+    );
   });
 });
 

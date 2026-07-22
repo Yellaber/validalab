@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
@@ -8,6 +9,12 @@ async function bootstrap() {
   // inválida una variable obligatoria, esto lanza y el proceso no escucha.
   const app = await NestFactory.create(AppModule);
   const config = app.get(AppConfigService);
+  // Parseo de cookies: necesario para leer la cookie `HttpOnly` del refresh token
+  // en `/usuarios/refresh` y `/usuarios/logout`.
+  app.use(cookieParser());
+  // CORS con credenciales: el navegador solo envía/recibe la cookie de refresh
+  // entre orígenes si el origen es explícito (no `*`) y `credentials` está activo.
+  app.enableCors({ origin: config.corsOrigins, credentials: true });
   // Documentación OpenAPI viva en `/docs` (la fuente de verdad del contrato
   // sigue siendo `contrato-api/openapi.yaml`).
   configurarSwagger(app);

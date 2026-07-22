@@ -16,14 +16,13 @@ import { ServicioDeTokens } from '../sesion/token.service';
 import { Usuario } from './usuario.entity';
 import {
   aUsuarioDto,
-  TokenRespuesta,
+  SesionEmitida,
   UsuarioRespuesta,
 } from './usuario-respuesta';
 import { EstadoUsuario, Rol } from './usuario.types';
 import {
   ActualizarPerfilDto,
   LoginDto,
-  RefrescarTokenDto,
   RegistroUsuarioDto,
 } from './usuarios.dto';
 
@@ -75,7 +74,7 @@ export class UsuariosService {
    * inválidas → `NoAutenticadoException` SIN distinguir si falló el email o la
    * contraseña. Una cuenta `suspendido` tampoco autentica (mismo error).
    */
-  async login(datos: LoginDto): Promise<TokenRespuesta> {
+  async login(datos: LoginDto): Promise<SesionEmitida> {
     const email = this.normalizarEmail(datos.email);
     const usuario = await this.usuarios.findOne({ where: { email } });
 
@@ -87,18 +86,18 @@ export class UsuariosService {
       throw new NoAutenticadoException('Credenciales inválidas.');
     }
 
-    return this.construirTokenRespuesta(usuario);
+    return this.emitirSesion(usuario);
   }
 
   /**
-   * Rota el refreshToken presentado y emite tokens nuevos. Token inválido,
+   * Rota el refreshToken de la cookie y emite una sesión nueva. Token inválido,
    * expirado o revocado → `NoAutenticadoException` (vía el servicio de tokens).
-   * Una cuenta `suspendido` no puede renovar.
+   * Una cuenta `suspendido` no puede renovar. Devuelve el cuerpo (sin refresh) y
+   * el refresh token rotado para la cookie.
    */
-  async refrescar(datos: RefrescarTokenDto): Promise<TokenRespuesta> {
-    const { usuarioId, refreshToken } = await this.tokens.rotarRefreshToken(
-      datos.refreshToken,
-    );
+  async refrescar(refreshTokenPlano: string): Promise<SesionEmitida> {
+    const { usuarioId, refreshToken } =
+      await this.tokens.rotarRefreshToken(refreshTokenPlano);
     const usuario = await this.usuarios.findOne({ where: { id: usuarioId } });
 
     if (!usuario || usuario.estado === 'suspendido') {
@@ -107,11 +106,13 @@ export class UsuariosService {
 
     const { accessToken, expiraEn } = this.tokens.firmarAccessToken(usuario);
     return {
-      accessToken,
+      cuerpo: {
+        accessToken,
+        tokenTipo: 'Bearer',
+        expiraEn,
+        usuario: aUsuarioDto(usuario),
+      },
       refreshToken,
-      tokenTipo: 'Bearer',
-      expiraEn,
-      usuario: aUsuarioDto(usuario),
     };
   }
 
@@ -195,17 +196,17 @@ export class UsuariosService {
     return usuario;
   }
 
-  private async construirTokenRespuesta(
-    usuario: Usuario,
-  ): Promise<TokenRespuesta> {
+  private async emitirSesion(usuario: Usuario): Promise<SesionEmitida> {
     const { accessToken, expiraEn } = this.tokens.firmarAccessToken(usuario);
     const refreshToken = await this.tokens.emitirRefreshToken(usuario.id);
     return {
-      accessToken,
+      cuerpo: {
+        accessToken,
+        tokenTipo: 'Bearer',
+        expiraEn,
+        usuario: aUsuarioDto(usuario),
+      },
       refreshToken,
-      tokenTipo: 'Bearer',
-      expiraEn,
-      usuario: aUsuarioDto(usuario),
     };
   }
 

@@ -21,11 +21,6 @@ export const loginSchema = z.object({
 });
 export class LoginDto extends createZodDto(loginSchema) {}
 
-export const refrescarTokenSchema = z.object({
-  refreshToken: z.string().min(1),
-});
-export class RefrescarTokenDto extends createZodDto(refrescarTokenSchema) {}
-
 export const actualizarPerfilSchema = z.object({
   nombre: z.string().min(1),
 });

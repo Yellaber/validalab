@@ -8,10 +8,13 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCookieAuth,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -22,13 +25,22 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
 import { Publico } from '../../auth/decorators/publico.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { OwnerId } from '../../auth/decorators/usuario-actual.decorator';
+import { NoAutenticadoException } from '../../common/errors/dominio.exception';
 import { ErrorRespuestaDto } from '../../common/errors/error-respuesta.dto';
 import { PaginacionQueryDto } from '../../common/pagination/paginacion.dto';
 import { RespuestaPaginada } from '../../common/pagination/respuesta-paginada';
+import { AppConfigService } from '../../config/app-config.service';
 import {
+  NOMBRE_COOKIE_REFRESH,
+  opcionesCookieRefresh,
+  opcionesLimpiezaCookieRefresh,
+} from '../sesion/cookie-sesion';
+import {
+  SesionEmitida,
   TokenRespuesta,
   TokenRespuestaDto,
   UsuarioRespuesta,
@@ -42,14 +54,44 @@ import {
   CambiarRolDto,
   IdUsuarioParamDto,
   LoginDto,
-  RefrescarTokenDto,
   RegistroUsuarioDto,
 } from './usuarios.dto';
 
 @ApiTags('usuarios')
 @Controller('usuarios')
 export class UsuariosController {
-  constructor(private readonly usuarios: UsuariosService) {}
+  constructor(
+    private readonly usuarios: UsuariosService,
+    private readonly config: AppConfigService,
+  ) {}
+
+  /** Escribe la cookie `HttpOnly` del refresh token y devuelve el cuerpo de sesión. */
+  private emitirCookie(res: Response, sesion: SesionEmitida): TokenRespuesta {
+    res.cookie(
+      NOMBRE_COOKIE_REFRESH,
+      sesion.refreshToken,
+      opcionesCookieRefresh({
+        secure: this.config.cookie.secure,
+        maxAgeMs: this.config.session.refreshTtlMs,
+      }),
+    );
+    return sesion.cuerpo;
+  }
+
+  /** Lee el refresh token de la cookie; ausente → `401` (para refresh). */
+  private leerCookieRefresh(req: Request): string {
+    const token = this.leerCookieOpcional(req);
+    if (!token) {
+      throw new NoAutenticadoException('Falta la cookie de refresh.');
+    }
+    return token;
+  }
+
+  /** Lee el refresh token de la cookie si está presente (para logout idempotente). */
+  private leerCookieOpcional(req: Request): string | undefined {
+    const cookies = req.cookies as Record<string, string> | undefined;
+    return cookies?.[NOMBRE_COOKIE_REFRESH];
+  }
 
   /** Alta de una cuenta nueva. Endpoint público. */
   @Publico()
@@ -75,62 +117,78 @@ export class UsuariosController {
     return this.usuarios.registrar(dto);
   }
 
-  /** Inicio de sesión: devuelve los tokens. Endpoint público. */
+  /** Inicio de sesión: devuelve el accessToken y emite la cookie de refresh. Endpoint público. */
   @Publico()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Autenticarse y obtener tokens',
-    description: 'Endpoint público. Devuelve `accessToken` y `refreshToken`.',
+    summary: 'Autenticarse y obtener la sesión',
+    description:
+      'Endpoint público. Devuelve el `accessToken` en el cuerpo y el `refreshToken` en una cookie `HttpOnly`.',
   })
   @ApiOkResponse({
-    description: 'Autenticación correcta.',
+    description: 'Autenticación correcta (con `Set-Cookie` del refresh token).',
     type: TokenRespuestaDto,
   })
   @ApiUnauthorizedResponse({
     description: 'Credenciales inválidas.',
     type: ErrorRespuestaDto,
   })
-  login(@Body() dto: LoginDto): Promise<TokenRespuesta> {
-    return this.usuarios.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<TokenRespuesta> {
+    return this.emitirCookie(res, await this.usuarios.login(dto));
   }
 
-  /** Renueva los tokens rotando el refreshToken. Endpoint público. */
+  /** Renueva la sesión rotando el refreshToken de la cookie. Basado en cookie. */
   @Publico()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('refreshCookie')
   @ApiOperation({
     summary: 'Renovar el token de acceso',
     description:
-      'Endpoint público (el `accessToken` puede haber expirado). Intercambia un `refreshToken` válido por un `TokenRespuesta` nuevo.',
+      'Lee el `refreshToken` de la cookie, lo rota y devuelve un `TokenRespuesta` nuevo con la cookie rotada. No recibe cuerpo. Cookie ausente o inválida → `401`.',
   })
   @ApiOkResponse({ description: 'Token renovado.', type: TokenRespuestaDto })
   @ApiUnauthorizedResponse({
-    description: 'El `refreshToken` es inválido o expiró.',
+    description: 'Falta la cookie de refresh o es inválida/expirada.',
     type: ErrorRespuestaDto,
   })
-  refrescar(@Body() dto: RefrescarTokenDto): Promise<TokenRespuesta> {
-    return this.usuarios.refrescar(dto);
+  async refrescar(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<TokenRespuesta> {
+    const refreshToken = this.leerCookieRefresh(req);
+    return this.emitirCookie(res, await this.usuarios.refrescar(refreshToken));
   }
 
-  /** Cierra sesión invalidando el refreshToken. Requiere estar autenticado. */
+  /** Cierra sesión invalidando el refreshToken de la cookie y limpiándola. Basado en cookie. */
+  @Publico()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiBearerAuth('bearerAuth')
+  @ApiCookieAuth('refreshCookie')
   @ApiOperation({
     summary: 'Cerrar sesión',
     description:
-      'Invalida el `refreshToken` de la sesión. Requiere estar autenticado.',
+      'Lee el `refreshToken` de la cookie, lo invalida y limpia la cookie. No exige `accessToken` válido. Idempotente.',
   })
   @ApiNoContentResponse({
     description: 'Sesión cerrada; el `refreshToken` deja de ser válido.',
   })
-  @ApiUnauthorizedResponse({
-    description: 'Falta un token de acceso válido.',
-    type: ErrorRespuestaDto,
-  })
-  logout(@Body() dto: RefrescarTokenDto): Promise<void> {
-    return this.usuarios.logout(dto.refreshToken);
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const refreshToken = this.leerCookieOpcional(req);
+    if (refreshToken) {
+      await this.usuarios.logout(refreshToken);
+    }
+    res.clearCookie(
+      NOMBRE_COOKIE_REFRESH,
+      opcionesLimpiezaCookieRefresh({ secure: this.config.cookie.secure }),
+    );
   }
 
   /** Consulta el perfil propio, resuelto desde el token (sin `id`). */
