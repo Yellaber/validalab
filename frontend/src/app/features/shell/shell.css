@@ -1,0 +1,59 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.marca {
+  font-weight: 700;
+  color: #4f46e5;
+  font-size: 1.1rem;
+}
+
+.identidad {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.identidad .nombre {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.identidad .email {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.salir {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #374151;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.salir:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.contenido {
+  flex: 1;
+  padding: 2rem 1.5rem;
+}

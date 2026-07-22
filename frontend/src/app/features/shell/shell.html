@@ -1,0 +1,17 @@
+<header class="barra">
+  <span class="marca">ValidaLab</span>
+
+  @if (usuario(); as u) {
+    <div class="identidad">
+      <span class="nombre">{{ u.nombre }}</span>
+      <span class="email">{{ u.email }}</span>
+    </div>
+    <button type="button" class="salir" [disabled]="cerrando()" (click)="cerrarSesion()">
+      {{ cerrando() ? 'Saliendo…' : 'Cerrar sesión' }}
+    </button>
+  }
+</header>
+
+<main class="contenido">
+  <router-outlet />
+</main>
