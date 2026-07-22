@@ -1,0 +1,40 @@
+<section class="auth-card">
+  <h1>Crear cuenta</h1>
+  <p class="auth-sub">Empieza a validar tus ideas con ValidaLab.</p>
+
+  <form (submit)="onSubmit(); $event.preventDefault()">
+    @if (errorGeneral(); as error) {
+      <p class="auth-error" role="alert">{{ error }}</p>
+    }
+
+    <label class="campo">
+      <span>Email</span>
+      <input type="email" autocomplete="email" [formField]="formulario.email" />
+      @if (formulario.email().touched() && formulario.email().errors().length) {
+        <small class="campo-error">{{ formulario.email().errors()[0].message }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Nombre</span>
+      <input type="text" autocomplete="name" [formField]="formulario.nombre" />
+      @if (formulario.nombre().touched() && formulario.nombre().errors().length) {
+        <small class="campo-error">{{ formulario.nombre().errors()[0].message }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Contraseña</span>
+      <input type="password" autocomplete="new-password" [formField]="formulario.password" />
+      @if (formulario.password().touched() && formulario.password().errors().length) {
+        <small class="campo-error">{{ formulario.password().errors()[0].message }}</small>
+      }
+    </label>
+
+    <button type="submit" [disabled]="enviando()">
+      {{ enviando() ? 'Creando…' : 'Crear cuenta' }}
+    </button>
+  </form>
+
+  <p class="auth-alt">¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a></p>
+</section>
