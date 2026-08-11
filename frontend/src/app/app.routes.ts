@@ -22,9 +22,24 @@ export const routes: Routes = [
     canMatch: [sesionGuard],
     loadComponent: () => import('./features/shell/shell').then((m) => m.Shell),
     children: [
+      { path: '', redirectTo: 'ideas', pathMatch: 'full' },
       {
-        path: '',
-        loadComponent: () => import('./features/shell/inicio/inicio').then((m) => m.Inicio),
+        path: 'ideas',
+        loadComponent: () => import('./features/ideas/lista/lista').then((m) => m.ListaIdeas),
+      },
+      {
+        path: 'ideas/nueva',
+        loadComponent: () =>
+          import('./features/ideas/formulario/formulario').then((m) => m.FormularioIdea),
+      },
+      {
+        path: 'ideas/:id',
+        loadComponent: () => import('./features/ideas/detalle/detalle').then((m) => m.DetalleIdea),
+      },
+      {
+        path: 'ideas/:id/editar',
+        loadComponent: () =>
+          import('./features/ideas/formulario/formulario').then((m) => m.FormularioIdea),
       },
     ],
   },
