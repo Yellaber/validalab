@@ -1,0 +1,60 @@
+<div class="cabecera">
+  <h1>{{ modoEdicion ? 'Editar idea' : 'Nueva idea' }}</h1>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando la idea…</p>
+} @else {
+  <form (submit)="onSubmit(); $event.preventDefault()">
+    @if (errorGeneral(); as error) {
+      <p class="error-general" role="alert">{{ error }}</p>
+    }
+
+    <label class="campo">
+      <span>Título</span>
+      <input type="text" [formField]="formulario.titulo" />
+      @if (formulario.titulo().touched() && formulario.titulo().errors().length) {
+        <small class="campo-error">{{ formulario.titulo().errors()[0].message }}</small>
+      } @else if (erroresCampo()['titulo']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Problema</span>
+      <textarea rows="3" [formField]="formulario.problema"></textarea>
+      @if (formulario.problema().touched() && formulario.problema().errors().length) {
+        <small class="campo-error">{{ formulario.problema().errors()[0].message }}</small>
+      } @else if (erroresCampo()['problema']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Descripción <em>(opcional)</em></span>
+      <textarea rows="3" [formField]="formulario.descripcion"></textarea>
+      @if (erroresCampo()['descripcion']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Segmento beachhead <em>(opcional)</em></span>
+      <input type="text" [formField]="formulario.segmentoBeachhead" />
+      @if (erroresCampo()['segmentoBeachhead']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <div class="acciones">
+      <button type="submit" class="boton-primario" [disabled]="enviando() || !formulario().valid()">
+        {{ enviando() ? 'Guardando…' : modoEdicion ? 'Guardar cambios' : 'Crear idea' }}
+      </button>
+      @if (modoEdicion && id) {
+        <a class="boton-secundario" [routerLink]="['/ideas', id]">Cancelar</a>
+      } @else {
+        <a class="boton-secundario" routerLink="/ideas">Cancelar</a>
+      }
+    </div>
+  </form>
+}

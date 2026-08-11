@@ -1,6 +1,6 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { SesionService } from '../../core/auth/sesion.service';
 import { Usuario } from '../../core/api/usuario.model';
@@ -28,18 +28,15 @@ function setup() {
   TestBed.configureTestingModule({
     providers: [
       provideZonelessChangeDetection(),
+      provideRouter([]),
       { provide: SesionService, useValue: sesion },
-      {
-        provide: Router,
-        useValue: {
-          navigateByUrl: (url: string) => {
-            navegaciones.push(url);
-            return Promise.resolve(true);
-          },
-        },
-      },
     ],
   });
+  const router = TestBed.inject(Router);
+  router.navigateByUrl = ((url: string) => {
+    navegaciones.push(String(url));
+    return Promise.resolve(true);
+  }) as Router['navigateByUrl'];
   const fixture = TestBed.createComponent(Shell);
   return { fixture, navegaciones, estado: () => cerrado };
 }
