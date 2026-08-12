@@ -209,3 +209,24 @@
   color: #1f2937;
   line-height: 1.6;
 }
+
+.accesos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.accesos a {
+  text-decoration: none;
+}
+
+/** Entradilla de las pantallas de criterio (hipótesis y umbrales, E2). */
+.intro {
+  margin: 0 0 1.5rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

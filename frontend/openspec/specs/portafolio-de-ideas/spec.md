@@ -1,7 +1,7 @@
 # portafolio-de-ideas Specification
 
 ## Purpose
-Portafolio de ideas en el cliente Angular (épica E1): crear, listar (paginado y filtrado por estado), consultar, editar, archivar y desarchivar las ideas propias del usuario autenticado, con sus estados de carga/vacío/error y la traducción de los errores del contrato ramificada por `codigo`. Consume el tag `ideas` del contrato de API único (solo los endpoints de la entidad `Idea`); la hipótesis/umbrales del mismo tag (E2) y las transiciones de veredicto `go`/`pivote`/`kill` (E6) quedan fuera. Se apoya en la plomería HTTP y de sesión del E0 (`cliente-http-y-errores`, `sesion-cliente`, `shell-y-navegacion`).
+Portafolio de ideas en el cliente Angular (épica E1): crear, listar (paginado y filtrado por estado), consultar, editar, archivar y desarchivar las ideas propias del usuario autenticado, con sus estados de carga/vacío/error y la traducción de los errores del contrato ramificada por `codigo`. Consume el tag `ideas` del contrato de API único, **solo los endpoints de la entidad `Idea`**: las colecciones que cuelgan de ella —hipótesis y umbrales kill/go (E2)— son competencia de `hipotesis-y-umbrales`, y las transiciones de veredicto `go`/`pivote`/`kill` (E6) quedan fuera. Desde el detalle de una idea se ofrece el acceso a su criterio de validación, pero su gestión no vive aquí. Se apoya en la plomería HTTP y de sesión del E0 (`cliente-http-y-errores`, `sesion-cliente`, `shell-y-navegacion`).
 
 ## Requirements
 
@@ -58,7 +58,7 @@ El cliente SHALL ofrecer un formulario de creación con **Signal Forms** que exi
 - **THEN** el cliente muestra el error asociado a cada campo afectado
 
 ### Requirement: Consultar el detalle de una idea propia
-El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar).
+El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar). El detalle MUST ofrecer además el acceso a las **hipótesis** y a los **umbrales kill/go** de esa idea, como puntos de entrada a la definición de su criterio de validación.
 
 #### Scenario: Detalle de idea propia
 - **WHEN** el usuario abre una idea suya
@@ -71,6 +71,10 @@ El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`,
 #### Scenario: Idea inexistente
 - **WHEN** `GET /ideas/{id}` responde `404 RECURSO_NO_ENCONTRADO`
 - **THEN** el cliente muestra un estado de idea no encontrada
+
+#### Scenario: Acceso a las hipótesis y los umbrales de la idea
+- **WHEN** el usuario ve el detalle de una idea suya
+- **THEN** dispone de accesos a las hipótesis y a los umbrales de esa idea, junto a las acciones de editar, archivar o desarchivar
 
 ### Requirement: Editar el contenido de una idea propia
 El cliente SHALL permitir editar `titulo`, `descripcion`, `problema` y `segmentoBeachhead` de una idea propia mediante `PATCH /ideas/{id}`, reutilizando el formulario de Signal Forms con los valores actuales. El formulario NO SHALL exponer ningún control para fijar el `estado` a `go`, `pivote` o `kill`: esas transiciones provienen del veredicto aprobado (E6). Un `422 VALIDACION_FALLIDA` MUST mostrarse campo a campo; un `403 ACCESO_DENEGADO` como acceso denegado.

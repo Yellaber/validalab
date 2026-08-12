@@ -1,0 +1,97 @@
+/* --- Hipótesis (E2) --- */
+
+.boton-peligro {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.boton-peligro:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hipotesis-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.etiqueta-tipo {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.hipotesis-encabezado .estado {
+  margin-bottom: 0;
+}
+
+.estado-confirmada {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.estado-refutada {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.enunciado {
+  margin: 0 0 0.75rem;
+  color: #1f2937;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.confirmacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.edicion .campo {
+  margin-bottom: 0.75rem;
+}
+
+.alta {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.alta h2 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.campo select {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}

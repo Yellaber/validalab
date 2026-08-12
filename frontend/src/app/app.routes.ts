@@ -41,6 +41,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/ideas/formulario/formulario').then((m) => m.FormularioIdea),
       },
+      {
+        path: 'ideas/:id/hipotesis',
+        loadComponent: () =>
+          import('./features/ideas/hipotesis/hipotesis').then((m) => m.HipotesisIdea),
+      },
+      {
+        path: 'ideas/:id/umbrales',
+        loadComponent: () =>
+          import('./features/ideas/umbrales/umbrales').then((m) => m.UmbralesIdea),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
