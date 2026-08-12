@@ -184,16 +184,62 @@ describe('UmbralesIdea', () => {
     await fixture.whenStable();
   });
 
-  it('editar solo el kill no degrada la precisión del go que no se tocó', async () => {
-    // El backend puede guardar más precisión de la que la unidad muestra: `0.3333`
-    // se presenta como "33.3". Reconstruir el go desde ese texto lo escribiría como
-    // `0.333`, degradando en silencio un valor que el usuario nunca editó.
+  it('muestra íntegro un valor más preciso que la entrada de su unidad', async () => {
     const { fixture, ctrl } = setup();
     const preciso: Umbral = { ...conjunto[0], umbralGo: 0.3333, umbralKill: 0.1 };
     ctrl.expectOne((r) => r.url.endsWith(BASE)).flush([preciso]);
     await fixture.whenStable();
 
-    expect(entrada(fila(fixture, 'Tasa de respuesta'), 'go')!.value).toBe('33.3');
+    expect(entrada(fila(fixture, 'Tasa de respuesta'), 'go')!.value).toBe('33.33');
+  });
+
+  it('un valor vigente, por preciso que sea, nunca bloquea su fila', async () => {
+    // Invariante del change: la validación de encaje con la unidad es una regla de
+    // entrada. Un `0.3333` vigente excede la precisión tecleable, pero es autoridad
+    // del backend: si bloqueara la fila, el usuario no podría corregir el otro campo.
+    const { fixture, ctrl } = setup();
+    const preciso: Umbral = { ...conjunto[0], umbralGo: 0.3333, umbralKill: 0.1 };
+    ctrl.expectOne((r) => r.url.endsWith(BASE)).flush([preciso]);
+    await fixture.whenStable();
+
+    expect(fila(fixture, 'Tasa de respuesta').textContent).not.toContain('Admite como máximo');
+
+    // …y el otro campo se puede editar y guardar, con el go intacto.
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'kill')!, '12');
+    const f = fila(fixture, 'Tasa de respuesta');
+    expect(botonGuardar(f).disabled).toBe(false);
+
+    botonGuardar(f).click();
+    await asentar(fixture);
+
+    const req = ctrl.expectOne((r) => r.method === 'PUT');
+    expect(req.request.body).toEqual({ umbralGo: 0.3333, umbralKill: 0.12 });
+    req.flush({ ...preciso, umbralKill: 0.12 });
+    await asentar(fixture);
+  });
+
+  it('la regla kill ≤ go se aplica aunque el go no se haya editado', async () => {
+    const { fixture, ctrl } = await cargado();
+
+    // El go vigente es 30 %; se teclea un kill mayor sin tocar el go.
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'kill')!, '40');
+
+    const f = fila(fixture, 'Tasa de respuesta');
+    expect(f.textContent).toContain('no puede superar al go');
+    expect(botonGuardar(f).disabled).toBe(true);
+    ctrl.expectNone((r) => r.method === 'PUT');
+  });
+
+  it('editar solo el kill no degrada la precisión del go que no se tocó', async () => {
+    // El backend puede guardar más precisión de la que se puede teclear. Reconstruir
+    // el go desde su texto lo redondearía a la precisión de entrada, degradando en
+    // silencio un valor que el usuario nunca editó.
+    const { fixture, ctrl } = setup();
+    const preciso: Umbral = { ...conjunto[0], umbralGo: 0.3333, umbralKill: 0.1 };
+    ctrl.expectOne((r) => r.url.endsWith(BASE)).flush([preciso]);
+    await fixture.whenStable();
+
+    expect(entrada(fila(fixture, 'Tasa de respuesta'), 'go')!.value).toBe('33.33');
 
     await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'kill')!, '12');
     botonGuardar(fila(fixture, 'Tasa de respuesta')).click();
@@ -230,8 +276,12 @@ describe('UmbralesIdea', () => {
     await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'go')!, '40');
     expect(botonGuardar(fila(fixture, 'Tasa de respuesta')).disabled).toBe(false);
 
-    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'go')!, '33.3');
-    expect(botonGuardar(fila(fixture, 'Tasa de respuesta')).disabled).toBe(true);
+    // Volver al texto original devuelve el campo a "no editado": ni se marca como
+    // cambiado ni se le aplica la regla de decimales, pese a tener dos.
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'go')!, '33.33');
+    const f = fila(fixture, 'Tasa de respuesta');
+    expect(botonGuardar(f).disabled).toBe(true);
+    expect(f.textContent).not.toContain('Admite como máximo');
 
     ctrl.expectNone((r) => r.method === 'PUT');
   });
