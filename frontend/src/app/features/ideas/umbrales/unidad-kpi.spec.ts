@@ -84,5 +84,28 @@ describe('unidad-kpi', () => {
       expect(motivoFueraDeRango(9999, 'conteo')).toBeNull();
       expect(motivoFueraDeRango(9999.5, 'ratio')).toBeNull();
     });
+
+    it('rechaza más decimales de los que la unidad puede guardar', () => {
+      // La precisión mostrada es también la que se puede persistir: admitir más
+      // decimales y truncarlos al convertir cambiaría el valor a espaldas del usuario.
+      expect(motivoFueraDeRango(33.33, 'porcentaje')).toContain('1 decimal');
+      expect(motivoFueraDeRango(7.55, 'puntaje_0_10')).toContain('1 decimal');
+      expect(motivoFueraDeRango(1.234, 'ratio')).toContain('2 decimales');
+    });
+
+    it('acepta la precisión justa que la unidad admite', () => {
+      expect(motivoFueraDeRango(33.3, 'porcentaje')).toBeNull();
+      expect(motivoFueraDeRango(25, 'porcentaje')).toBeNull();
+      expect(motivoFueraDeRango(7.5, 'puntaje_0_10')).toBeNull();
+      expect(motivoFueraDeRango(1.23, 'ratio')).toBeNull();
+    });
+
+    it('todo valor que llega del contrato pasa su propia validación', () => {
+      // `aPresentacion` redondea a la precisión de la unidad, así que un valor
+      // vigente nunca puede quedar bloqueado por la regla de decimales.
+      for (const tasa of [0.3333, 0.1155, 0.6667, 0.25]) {
+        expect(motivoFueraDeRango(aPresentacion(tasa, 'porcentaje'), 'porcentaje')).toBeNull();
+      }
+    });
   });
 });

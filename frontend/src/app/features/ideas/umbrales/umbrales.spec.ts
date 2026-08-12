@@ -184,6 +184,72 @@ describe('UmbralesIdea', () => {
     await fixture.whenStable();
   });
 
+  it('editar solo el kill no degrada la precisión del go que no se tocó', async () => {
+    // El backend puede guardar más precisión de la que la unidad muestra: `0.3333`
+    // se presenta como "33.3". Reconstruir el go desde ese texto lo escribiría como
+    // `0.333`, degradando en silencio un valor que el usuario nunca editó.
+    const { fixture, ctrl } = setup();
+    const preciso: Umbral = { ...conjunto[0], umbralGo: 0.3333, umbralKill: 0.1 };
+    ctrl.expectOne((r) => r.url.endsWith(BASE)).flush([preciso]);
+    await fixture.whenStable();
+
+    expect(entrada(fila(fixture, 'Tasa de respuesta'), 'go')!.value).toBe('33.3');
+
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'kill')!, '12');
+    botonGuardar(fila(fixture, 'Tasa de respuesta')).click();
+    await asentar(fixture);
+
+    const req = ctrl.expectOne((r) => r.method === 'PUT');
+    expect(req.request.body).toEqual({ umbralGo: 0.3333, umbralKill: 0.12 });
+    req.flush({ ...preciso, umbralKill: 0.12 });
+    await asentar(fixture);
+  });
+
+  it('editar solo el go no degrada el kill que no se tocó', async () => {
+    const { fixture, ctrl } = setup();
+    const preciso: Umbral = { ...conjunto[0], umbralGo: 0.5, umbralKill: 0.1234 };
+    ctrl.expectOne((r) => r.url.endsWith(BASE)).flush([preciso]);
+    await fixture.whenStable();
+
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'go')!, '55');
+    botonGuardar(fila(fixture, 'Tasa de respuesta')).click();
+    await asentar(fixture);
+
+    const req = ctrl.expectOne((r) => r.method === 'PUT');
+    expect(req.request.body).toEqual({ umbralGo: 0.55, umbralKill: 0.1234 });
+    req.flush({ ...preciso, umbralGo: 0.55 });
+    await asentar(fixture);
+  });
+
+  it('teclear y volver al valor original cuenta como sin cambios', async () => {
+    const { fixture, ctrl } = setup();
+    const preciso: Umbral = { ...conjunto[0], umbralGo: 0.3333, umbralKill: 0.1 };
+    ctrl.expectOne((r) => r.url.endsWith(BASE)).flush([preciso]);
+    await fixture.whenStable();
+
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'go')!, '40');
+    expect(botonGuardar(fila(fixture, 'Tasa de respuesta')).disabled).toBe(false);
+
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'go')!, '33.3');
+    expect(botonGuardar(fila(fixture, 'Tasa de respuesta')).disabled).toBe(true);
+
+    ctrl.expectNone((r) => r.method === 'PUT');
+  });
+
+  it('más decimales de los que admite la unidad se rechazan en vez de truncarse', async () => {
+    const { fixture, ctrl } = await cargado();
+
+    await escribir(fixture, entrada(fila(fixture, 'Tasa de respuesta'), 'go')!, '33.33');
+
+    const f = fila(fixture, 'Tasa de respuesta');
+    expect(f.textContent).toContain('Admite como máximo 1 decimal');
+    expect(botonGuardar(f).disabled).toBe(true);
+
+    botonGuardar(f).click();
+    await asentar(fixture);
+    ctrl.expectNone((r) => r.method === 'PUT');
+  });
+
   it('sin cambios el guardado está deshabilitado y no emite petición', async () => {
     const { fixture, ctrl } = await cargado();
 

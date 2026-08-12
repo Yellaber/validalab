@@ -35,6 +35,12 @@ interface VistaFila {
   tieneKill: boolean;
   errorGo: string | null;
   errorKill: string | null;
+  /**
+   * Si el texto difiere de la presentación del valor vigente. Decide si al guardar
+   * se reconstruye el valor desde el texto o se reenvía el del contrato intacto.
+   */
+  goCambiado: boolean;
+  killCambiado: boolean;
   puedeGuardar: boolean;
 }
 
@@ -155,18 +161,25 @@ export class UmbralesIdea {
       return;
     }
     const { umbral, textoGo, textoKill } = vista.fila;
-    const go = parsear(textoGo);
-    if (go === null) {
+
+    // Solo se reconstruye desde el texto lo que el usuario editó. Un campo intacto
+    // se reenvía tal como vino del contrato: si se reconstruyera, el redondeo de
+    // presentación se convertiría en escritura y degradaría un valor que nadie tocó
+    // (p. ej. `0.3333` → "33.3" → `0.333` al guardar solo el otro campo).
+    const valorGo = vista.goCambiado ? this.desdeTexto(textoGo, umbral.unidad) : umbral.umbralGo;
+    if (valorGo === null) {
       return;
     }
 
-    const cuerpo: ActualizarUmbralRequest = { umbralGo: aTransporte(go, umbral.unidad) };
+    const cuerpo: ActualizarUmbralRequest = { umbralGo: valorGo };
     if (vista.tieneKill) {
-      const kill = parsear(textoKill);
-      if (kill === null) {
+      const valorKill = vista.killCambiado
+        ? this.desdeTexto(textoKill, umbral.unidad)
+        : umbral.umbralKill;
+      if (valorKill === null) {
         return;
       }
-      cuerpo.umbralKill = aTransporte(kill, umbral.unidad);
+      cuerpo.umbralKill = valorKill;
     }
 
     this.actualizarFila(umbral.kpi, {
@@ -184,6 +197,12 @@ export class UmbralesIdea {
     } catch (error) {
       this.actualizarFila(umbral.kpi, { guardando: false, ...this.errorDeFila(error) });
     }
+  }
+
+  /** Valor de transporte a partir del texto tecleado; `null` si no es un número. */
+  private desdeTexto(texto: string, unidad: string): number | null {
+    const valor = parsear(texto);
+    return valor === null ? null : aTransporte(valor, unidad);
   }
 
   /** Cambia una fila sin tocar las demás: un fallo aquí no contamina otras ediciones. */
@@ -239,9 +258,12 @@ export class UmbralesIdea {
     }
 
     const valida = !errorGo && !errorKill;
-    const sinCambios =
-      fila.textoGo === textoDe(umbral.umbralGo, unidad) &&
-      (!tieneKill || fila.textoKill === textoDe(umbral.umbralKill, unidad));
+    // Se compara contra la presentación del valor vigente, no contra un flag de
+    // "tocado": así, teclear y volver al valor original cuenta como no cambiado y
+    // el campo se reenvía intacto.
+    const goCambiado = fila.textoGo !== textoDe(umbral.umbralGo, unidad);
+    const killCambiado = tieneKill && fila.textoKill !== textoDe(umbral.umbralKill, unidad);
+    const sinCambios = !goCambiado && !killCambiado;
 
     // Los errores del backend se muestran junto a los locales, sin sustituirlos.
     errorGo = errorGo ?? erroresCampo['umbralGo'] ?? null;
@@ -255,6 +277,8 @@ export class UmbralesIdea {
       tieneKill,
       errorGo,
       errorKill,
+      goCambiado,
+      killCambiado,
       puedeGuardar: valida && !sinCambios && !fila.guardando,
     };
   }

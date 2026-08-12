@@ -89,5 +89,12 @@ export function motivoFueraDeRango(valor: number, unidad: string): string | null
   if (decimales === 0 && !Number.isInteger(valor)) {
     return 'Debe ser un número entero.';
   }
+  // La precisión que la unidad muestra es también la que puede guardar: teclear más
+  // decimales de los admitidos se rechaza en vez de truncarse en silencio.
+  if (decimales > 0 && redondear(valor, decimales) !== valor) {
+    return decimales === 1
+      ? 'Admite como máximo 1 decimal.'
+      : `Admite como máximo ${decimales} decimales.`;
+  }
   return null;
 }
