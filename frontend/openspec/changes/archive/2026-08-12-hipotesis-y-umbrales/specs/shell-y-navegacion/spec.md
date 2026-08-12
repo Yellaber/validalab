@@ -1,25 +1,4 @@
-# shell-y-navegacion Specification
-
-## Purpose
-TBD - created by archiving change cimientos-y-autenticacion. Update Purpose after archive.
-## Requirements
-### Requirement: Protección de rutas por sesión
-El cliente SHALL separar las rutas públicas (`/login`, `/registro`) de las rutas protegidas (el shell autenticado y sus hijos). Una ruta protegida SHALL exigir una sesión válida: sin ella, el cliente SHALL redirigir a `/login`. El chunk de una ruta protegida NO SHALL cargarse para un usuario sin sesión.
-
-#### Scenario: Acceso sin sesión a una ruta protegida
-- **WHEN** un usuario no autenticado navega a una ruta protegida
-- **THEN** el cliente lo redirige a `/login` y no activa la ruta protegida
-
-#### Scenario: Acceso con sesión válida
-- **WHEN** un usuario autenticado navega a una ruta protegida
-- **THEN** el cliente activa la ruta y muestra su contenido dentro del shell
-
-### Requirement: Redirección del usuario ya autenticado fuera de las rutas públicas
-El cliente SHALL impedir que un usuario con sesión válida permanezca en `/login` o `/registro`, redirigiéndolo al shell autenticado.
-
-#### Scenario: Usuario autenticado abre el login
-- **WHEN** un usuario ya autenticado navega a `/login` o `/registro`
-- **THEN** el cliente lo redirige a la pantalla de inicio del shell
+## MODIFIED Requirements
 
 ### Requirement: Shell autenticado con identidad y cierre de sesión
 El cliente SHALL presentar, para el usuario autenticado, un shell con un `<router-outlet>` para las rutas de dominio, que muestre la identidad del usuario en sesión (al menos su `nombre` o `email`) y ofrezca la acción de cerrar sesión. La ruta por defecto del shell SHALL renderizar el **listado del portafolio de ideas** (no un marcador de posición). El shell SHALL alojar las rutas hijas protegidas del dominio `ideas` (listado, alta, detalle, edición, **hipótesis de una idea** y **umbrales de una idea**) con carga diferida, de modo que sus chunks no se carguen para un usuario sin sesión.
@@ -40,4 +19,3 @@ El cliente SHALL presentar, para el usuario autenticado, un shell con un `<route
 #### Scenario: Las rutas anidadas de una idea cuelgan del shell
 - **WHEN** el usuario autenticado navega a las hipótesis o a los umbrales de una idea
 - **THEN** el cliente activa la ruta hija correspondiente dentro del shell cargando su chunk de forma diferida
-
