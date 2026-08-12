@@ -1,0 +1,179 @@
+<div class="cabecera">
+  <h1>Hipótesis</h1>
+  <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+</div>
+
+<p class="intro">
+  Declara qué pone a prueba esta idea. Tú marcas cada hipótesis como confirmada o refutada según la
+  evidencia que recojas: ValidaLab no lo decide por ti.
+</p>
+
+@if (errorAccion(); as msg) {
+  <p class="error-general" role="alert">{{ msg }}</p>
+}
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando las hipótesis…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else {
+      <p>No se pudieron cargar las hipótesis. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+  </div>
+} @else {
+  @if (vacio()) {
+    <div class="vacio">
+      <p>Todavía no has declarado ninguna hipótesis para esta idea.</p>
+    </div>
+  } @else {
+    <ul class="lista">
+      @for (h of lista(); track h.id) {
+        <li class="tarjeta">
+          @if (editandoId() === h.id) {
+            <form class="edicion" (submit)="guardarEdicion(); $event.preventDefault()">
+              @if (errorEdicion(); as msg) {
+                <p class="error-general" role="alert">{{ msg }}</p>
+              }
+
+              <label class="campo">
+                <span>Tipo</span>
+                <select [formField]="formularioEdicion.tipo">
+                  @for (t of tipos; track t) {
+                    <option [value]="t">{{ etiquetaTipo[t] }}</option>
+                  }
+                </select>
+                @if (erroresCampoEdicion()['tipo']; as msg) {
+                  <small class="campo-error">{{ msg }}</small>
+                }
+              </label>
+
+              <label class="campo">
+                <span>Enunciado</span>
+                <textarea rows="2" [formField]="formularioEdicion.enunciado"></textarea>
+                @if (
+                  formularioEdicion.enunciado().touched() &&
+                  formularioEdicion.enunciado().errors().length
+                ) {
+                  <small class="campo-error">
+                    {{ formularioEdicion.enunciado().errors()[0].message }}
+                  </small>
+                } @else if (erroresCampoEdicion()['enunciado']; as msg) {
+                  <small class="campo-error">{{ msg }}</small>
+                }
+              </label>
+
+              <div class="acciones-fila">
+                <button
+                  type="submit"
+                  class="boton-primario"
+                  [disabled]="editando() || !formularioEdicion().valid()"
+                >
+                  {{ editando() ? 'Guardando…' : 'Guardar' }}
+                </button>
+                <button type="button" class="boton-secundario" (click)="cancelarEdicion()">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          } @else {
+            <div class="hipotesis-encabezado">
+              <span class="etiqueta-tipo">{{ etiquetaTipo[h.tipo] }}</span>
+              <span class="estado estado-{{ h.estado }}">{{ etiquetaEstado[h.estado] }}</span>
+            </div>
+            <p class="enunciado">{{ h.enunciado }}</p>
+
+            @if (confirmandoId() === h.id) {
+              <div class="confirmacion" role="alert">
+                <span>¿Eliminar esta hipótesis? No se puede deshacer.</span>
+                <button
+                  type="button"
+                  class="boton-peligro"
+                  [disabled]="accionEnCursoId() === h.id"
+                  (click)="confirmarEliminar(h.id)"
+                >
+                  {{ accionEnCursoId() === h.id ? 'Eliminando…' : 'Sí, eliminar' }}
+                </button>
+                <button type="button" class="boton-secundario" (click)="cancelarEliminar()">
+                  Cancelar
+                </button>
+              </div>
+            } @else {
+              <div class="acciones-fila">
+                @for (e of estados; track e) {
+                  @if (e !== h.estado) {
+                    <button
+                      type="button"
+                      class="boton-secundario"
+                      [disabled]="accionEnCursoId() === h.id"
+                      (click)="marcar(h, e)"
+                    >
+                      {{ accionEstado[e] }}
+                    </button>
+                  }
+                }
+                <button type="button" class="boton-secundario" (click)="iniciarEdicion(h)">
+                  Editar
+                </button>
+                <button type="button" class="boton-secundario" (click)="pedirEliminar(h.id)">
+                  Eliminar
+                </button>
+              </div>
+            }
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <section class="alta">
+    <h2>Nueva hipótesis</h2>
+    <form (submit)="crear(); $event.preventDefault()">
+      @if (errorAlta(); as msg) {
+        <p class="error-general" role="alert">{{ msg }}</p>
+      }
+
+      <label class="campo">
+        <span>Tipo</span>
+        <select [formField]="formularioAlta.tipo">
+          @for (t of tipos; track t) {
+            <option [value]="t">{{ etiquetaTipo[t] }} — {{ ayudaTipo[t] }}</option>
+          }
+        </select>
+        @if (erroresCampoAlta()['tipo']; as msg) {
+          <small class="campo-error">{{ msg }}</small>
+        }
+      </label>
+
+      <label class="campo">
+        <span>Enunciado</span>
+        <textarea
+          rows="2"
+          placeholder="Afirmación falsable que contrastarás con la evidencia"
+          [formField]="formularioAlta.enunciado"
+        ></textarea>
+        @if (formularioAlta.enunciado().touched() && formularioAlta.enunciado().errors().length) {
+          <small class="campo-error">{{ formularioAlta.enunciado().errors()[0].message }}</small>
+        } @else if (erroresCampoAlta()['enunciado']; as msg) {
+          <small class="campo-error">{{ msg }}</small>
+        }
+      </label>
+
+      <div class="acciones">
+        <button
+          type="submit"
+          class="boton-primario"
+          [disabled]="creando() || !formularioAlta().valid()"
+        >
+          {{ creando() ? 'Añadiendo…' : 'Añadir hipótesis' }}
+        </button>
+      </div>
+    </form>
+  </section>
+}

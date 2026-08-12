@@ -47,4 +47,40 @@ describe('rutas del portafolio', () => {
 
     expect(TestBed.inject(Router).url).toBe('/login');
   });
+
+  it('con sesión, las hipótesis de una idea cuelgan del shell con carga diferida', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/hipotesis');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    ctrl.expectOne((r) => r.url.endsWith('/ideas/i1/hipotesis')).flush([]);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/hipotesis');
+    expect(harness.fixture.nativeElement.textContent).toContain('Hipótesis');
+  });
+
+  it('con sesión, los umbrales de una idea cuelgan del shell con carga diferida', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/umbrales');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    ctrl.expectOne((r) => r.url.endsWith('/ideas/i1/umbrales')).flush([]);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/umbrales');
+    expect(harness.fixture.nativeElement.textContent).toContain('Umbrales kill/go');
+  });
+
+  it('sin sesión, las rutas anidadas de una idea redirigen a /login', async () => {
+    setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/umbrales');
+
+    expect(TestBed.inject(Router).url).toBe('/login');
+  });
 });

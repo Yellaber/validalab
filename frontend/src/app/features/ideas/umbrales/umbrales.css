@@ -1,0 +1,102 @@
+/* --- Umbrales kill/go (E2) --- */
+
+.grupo-kpi {
+  margin-bottom: 2rem;
+}
+
+.grupo-kpi h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.grupo-kpi .contexto {
+  margin: 0 0 1rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.fila-umbral {
+  display: grid;
+  grid-template-columns: minmax(12rem, 2fr) 1fr 1fr auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  margin-bottom: 0.6rem;
+}
+
+.fila-umbral + .fila-umbral {
+  margin-top: 0;
+}
+
+.nombre-kpi {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.nombre-kpi small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.campo-umbral {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: #4b5563;
+}
+
+.campo-umbral .entrada {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.campo-umbral input {
+  width: 100%;
+  min-width: 4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.campo-umbral input:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.sufijo {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.sin-kill {
+  align-self: center;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+.fila-umbral .estado-guardado {
+  align-self: center;
+  color: #047857;
+  font-size: 0.8rem;
+}
+
+.fila-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.8rem;
+}

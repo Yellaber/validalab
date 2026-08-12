@@ -45,6 +45,20 @@ describe('DetalleIdea', () => {
     expect(fixture.nativeElement.textContent).toContain('Borrador');
   });
 
+  it('ofrece el acceso a las hipótesis y a los umbrales de la idea', async () => {
+    const { fixture, ctrl } = setup();
+    ctrl.expectOne((r) => r.url.endsWith(BASE)).flush(idea);
+    await fixture.whenStable();
+
+    const enlaces = Array.from(
+      fixture.nativeElement.querySelectorAll('.accesos a'),
+    ) as HTMLAnchorElement[];
+    const destinos = enlaces.map((a) => a.getAttribute('href'));
+
+    expect(destinos).toContain('/ideas/i1/hipotesis');
+    expect(destinos).toContain('/ideas/i1/umbrales');
+  });
+
   it('archivar llama al endpoint y refleja el estado archivada', async () => {
     const { fixture, ctrl } = setup();
     ctrl.expectOne((r) => r.url.endsWith(BASE)).flush(idea);
