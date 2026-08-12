@@ -1,7 +1,7 @@
 # portafolio-de-ideas Specification
 
 ## Purpose
-Portafolio de ideas en el cliente Angular (épica E1): crear, listar (paginado y filtrado por estado), consultar, editar, archivar y desarchivar las ideas propias del usuario autenticado, con sus estados de carga/vacío/error y la traducción de los errores del contrato ramificada por `codigo`. Consume el tag `ideas` del contrato de API único (solo los endpoints de la entidad `Idea`); la hipótesis/umbrales del mismo tag (E2) y las transiciones de veredicto `go`/`pivote`/`kill` (E6) quedan fuera. Se apoya en la plomería HTTP y de sesión del E0 (`cliente-http-y-errores`, `sesion-cliente`, `shell-y-navegacion`).
+Portafolio de ideas en el cliente Angular (épica E1): crear, listar (paginado y filtrado por estado), consultar, editar, archivar y desarchivar las ideas propias del usuario autenticado, con sus estados de carga/vacío/error y la traducción de los errores del contrato ramificada por `codigo`. Consume el tag `ideas` del contrato de API único, **solo los endpoints de la entidad `Idea`**: las colecciones que cuelgan de ella —hipótesis y umbrales kill/go (E2)— son competencia de `hipotesis-y-umbrales`, y las transiciones de veredicto `go`/`pivote`/`kill` (E6) quedan fuera. Desde el detalle de una idea se ofrece el acceso a su criterio de validación, pero su gestión no vive aquí. Se apoya en la plomería HTTP y de sesión del E0 (`cliente-http-y-errores`, `sesion-cliente`, `shell-y-navegacion`).
 
 ## Requirements
 

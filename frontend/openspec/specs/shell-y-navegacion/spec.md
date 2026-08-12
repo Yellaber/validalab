@@ -1,7 +1,8 @@
 # shell-y-navegacion Specification
 
 ## Purpose
-TBD - created by archiving change cimientos-y-autenticacion. Update Purpose after archive.
+Estructura de navegación del cliente Angular: la separación entre rutas públicas (`/login`, `/registro`) y protegidas, el shell autenticado que las aloja, y la protección de acceso por sesión. Define qué exige una ruta protegida (sesión válida, o redirección a `/login`), que sus chunks no se carguen para un usuario sin sesión, que un usuario ya autenticado no permanezca en las rutas públicas, y que el shell muestre la identidad en sesión y ofrezca cerrar sesión. Es el armazón sobre el que cuelgan las rutas de dominio con carga diferida; el **contenido** de cada pantalla lo especifican sus propias capacidades (`portafolio-de-ideas`, `hipotesis-y-umbrales`). La mecánica de la sesión (tokens, renovación, rehidratación) vive en `sesion-cliente`.
+
 ## Requirements
 ### Requirement: Protección de rutas por sesión
 El cliente SHALL separar las rutas públicas (`/login`, `/registro`) de las rutas protegidas (el shell autenticado y sus hijos). Una ruta protegida SHALL exigir una sesión válida: sin ella, el cliente SHALL redirigir a `/login`. El chunk de una ruta protegida NO SHALL cargarse para un usuario sin sesión.
