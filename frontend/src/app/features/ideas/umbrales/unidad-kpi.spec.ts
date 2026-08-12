@@ -34,6 +34,40 @@ describe('unidad-kpi', () => {
     });
   });
 
+  describe('presentación fiel al valor del contrato', () => {
+    it('no redondea a la precisión de entrada de la unidad', () => {
+      // El contrato no declara precisión: se muestra lo que hay. Redondear aquí haría
+      // juzgar un criterio de kill sobre una cifra que no es la almacenada.
+      expect(aPresentacion(0.3333, 'porcentaje')).toBe(33.33);
+      expect(textoDe(0.3333, 'porcentaje')).toBe('33.33');
+      expect(textoDe(0.123456, 'porcentaje')).toBe('12.3456');
+      expect(textoDe(1.234, 'ratio')).toBe('1.234');
+      expect(textoDe(7.55, 'puntaje_0_10')).toBe('7.55');
+    });
+
+    it('sanea el ruido de coma flotante sin tocar la precisión real', () => {
+      expect(textoDe(0.1 + 0.2, 'porcentaje')).toBe('30');
+      expect(textoDe(0.30000000000000004, 'porcentaje')).toBe('30');
+      // …pero un valor genuinamente fino sobrevive al saneamiento.
+      expect(textoDe(0.3333, 'porcentaje')).toBe('33.33');
+    });
+
+    it('nunca produce notación exponencial', () => {
+      for (const tasa of [1e-7, 1e-9, 0.0000005]) {
+        const texto = textoDe(tasa, 'porcentaje');
+        expect(texto).not.toContain('e');
+        expect(texto).not.toContain('E');
+      }
+      expect(textoDe(1e-7, 'ratio')).toBe('0.0000001');
+    });
+
+    it('dos valores almacenados distintos ya no producen el mismo texto', () => {
+      // Antes, `0.3333` y `0.333` se mostraban ambos como "33.3", así que editar de
+      // uno a otro se confundía con "sin cambios".
+      expect(textoDe(0.3333, 'porcentaje')).not.toBe(textoDe(0.333, 'porcentaje'));
+    });
+  });
+
   describe('unidades sin conversión', () => {
     it('conteo, conteo_semanal, ratio y puntaje viajan en crudo', () => {
       expect(aPresentacion(15, 'conteo')).toBe(15);
@@ -100,12 +134,16 @@ describe('unidad-kpi', () => {
       expect(motivoFueraDeRango(1.23, 'ratio')).toBeNull();
     });
 
-    it('todo valor que llega del contrato pasa su propia validación', () => {
-      // `aPresentacion` redondea a la precisión de la unidad, así que un valor
-      // vigente nunca puede quedar bloqueado por la regla de decimales.
-      for (const tasa of [0.3333, 0.1155, 0.6667, 0.25]) {
-        expect(motivoFueraDeRango(aPresentacion(tasa, 'porcentaje'), 'porcentaje')).toBeNull();
-      }
+    it('un valor del contrato más fino que la entrada NO pasa esta regla, y es correcto', () => {
+      // Con presentación fiel, `0.3333` se muestra como `33.33`, que excede la
+      // precisión de entrada. Por eso `motivoFueraDeRango` es una regla de ENTRADA:
+      // el componente solo debe aplicarla a los campos que el usuario editó. El
+      // invariante «un valor vigente nunca bloquea su fila» se verifica allí.
+      expect(motivoFueraDeRango(aPresentacion(0.3333, 'porcentaje'), 'porcentaje')).toContain(
+        '1 decimal',
+      );
+      // Un valor que sí encaja en la precisión de entrada pasa, editado o no.
+      expect(motivoFueraDeRango(aPresentacion(0.25, 'porcentaje'), 'porcentaje')).toBeNull();
     });
   });
 });

@@ -242,7 +242,23 @@ export class UmbralesIdea {
     const tieneKill = umbral.umbralKill !== null;
 
     const go = parsear(fila.textoGo);
-    let errorGo = go === null ? 'Indica un número.' : motivoFueraDeRango(go, unidad);
+    // Se compara contra la presentación del valor vigente, no contra un flag de
+    // "tocado": así, teclear y volver al valor original cuenta como no cambiado y
+    // el campo se reenvía intacto.
+    const goCambiado = fila.textoGo !== textoDe(umbral.umbralGo, unidad);
+    const killCambiado = tieneKill && fila.textoKill !== textoDe(umbral.umbralKill, unidad);
+    const sinCambios = !goCambiado && !killCambiado;
+
+    // El encaje con la unidad (rango, entero, decimales) solo se valida sobre lo que
+    // el usuario tecleó: un valor vigente es autoridad del backend, no una entrada, y
+    // bloquear su fila impediría corregir el otro campo. Si de verdad fuera inválido,
+    // el backend lo rechazará con su `422` al guardar.
+    let errorGo: string | null = null;
+    if (go === null) {
+      errorGo = 'Indica un número.';
+    } else if (goCambiado) {
+      errorGo = motivoFueraDeRango(go, unidad);
+    }
 
     let errorKill: string | null = null;
     if (tieneKill) {
@@ -250,7 +266,11 @@ export class UmbralesIdea {
       if (kill === null) {
         errorKill = 'Indica un número.';
       } else {
-        errorKill = motivoFueraDeRango(kill, unidad);
+        if (killCambiado) {
+          errorKill = motivoFueraDeRango(kill, unidad);
+        }
+        // La regla cruzada se evalúa SIEMPRE: no es el encaje de un campo con su
+        // unidad, sino una relación entre los dos valores que viajan juntos.
         if (!errorKill && go !== null && kill > go) {
           errorKill = 'El umbral kill no puede superar al go.';
         }
@@ -258,12 +278,6 @@ export class UmbralesIdea {
     }
 
     const valida = !errorGo && !errorKill;
-    // Se compara contra la presentación del valor vigente, no contra un flag de
-    // "tocado": así, teclear y volver al valor original cuenta como no cambiado y
-    // el campo se reenvía intacto.
-    const goCambiado = fila.textoGo !== textoDe(umbral.umbralGo, unidad);
-    const killCambiado = tieneKill && fila.textoKill !== textoDe(umbral.umbralKill, unidad);
-    const sinCambios = !goCambiado && !killCambiado;
 
     // Los errores del backend se muestran junto a los locales, sin sustituirlos.
     errorGo = errorGo ?? erroresCampo['umbralGo'] ?? null;
