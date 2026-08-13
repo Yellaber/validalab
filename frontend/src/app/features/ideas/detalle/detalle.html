@@ -39,6 +39,7 @@
   <nav class="accesos" aria-label="Criterio de validación de la idea">
     <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'hipotesis']">Hipótesis</a>
     <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'umbrales']">Umbrales kill/go</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'contactos']">Contactos</a>
   </nav>
 
   @if (errorAccion(); as msg) {

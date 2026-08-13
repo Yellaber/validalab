@@ -223,10 +223,46 @@
   text-decoration: none;
 }
 
-/** Entradilla de las pantallas de criterio (hipótesis y umbrales, E2). */
+/** Entradilla de las pantallas de dominio anidadas bajo una idea (E2/E3). */
 .intro {
   margin: 0 0 1.5rem;
   color: #6b7280;
   font-size: 0.9rem;
   line-height: 1.5;
+}
+
+/* --- Acciones de fila y confirmación en línea (compartido E2/E3) --- */
+
+.acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.boton-peligro {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.boton-peligro:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.confirmacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.85rem;
 }

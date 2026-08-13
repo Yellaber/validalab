@@ -1,0 +1,145 @@
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el contacto…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a este contacto.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Este contacto no existe.</p>
+    } @else {
+      <p>No se pudo cargar el contacto. ({{ err.codigo }})</p>
+    }
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'contactos']">
+      Volver a los contactos
+    </a>
+  </div>
+} @else if (contacto(); as c) {
+  <div class="cabecera">
+    <h1>{{ c.nombre }}</h1>
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'contactos']">Volver</a>
+  </div>
+
+  <span class="estado estado-{{ c.estado }}">{{ etiquetaEstado[c.estado] }}</span>
+
+  <section class="detalle">
+    <dl>
+      @if (c.perfil) {
+        <dt>Perfil</dt>
+        <dd>{{ c.perfil }}</dd>
+      }
+
+      @if (c.enlace) {
+        <dt>Enlace</dt>
+        <dd>{{ c.enlace }}</dd>
+      }
+
+      <dt>Canal</dt>
+      <dd>{{ etiquetaCanal[c.canal] }}</dd>
+
+      <dt>Origen</dt>
+      <dd>
+        {{ etiquetaOrigen[c.origen] }}
+        @if (c.referidoPorId) {
+          <span class="referido"> · referido por otro contacto de esta idea</span>
+        }
+      </dd>
+
+      @if (c.notas) {
+        <dt>Notas</dt>
+        <dd>{{ c.notas }}</dd>
+      }
+    </dl>
+  </section>
+
+  @if (errorAccion(); as msg) {
+    <p class="error-general" role="alert">{{ msg }}</p>
+  }
+
+  <section class="toques">
+    <h2>Toques de outreach</h2>
+    @if (toques() === 0) {
+      <p class="limite">Todavía no has contactado a esta persona.</p>
+    } @else {
+      <ol>
+        @if (c.primerToqueEn) {
+          <li>Primer toque: {{ c.primerToqueEn }}</li>
+        }
+        @if (c.segundoToqueEn) {
+          <li>Segundo toque (follow-up): {{ c.segundoToqueEn }}</li>
+        }
+      </ol>
+    }
+
+    @if (limiteDeToques()) {
+      <p class="limite">
+        Este contacto alcanzó los dos toques que permite el método. No insistir más allá del
+        follow-up es lo que hace que la tasa de respuesta signifique algo.
+      </p>
+    } @else {
+      <div class="registrar-toque">
+        <label>
+          Fecha <em>(opcional)</em>
+          <input
+            type="date"
+            [value]="fechaToque()"
+            (input)="cambiarFechaToque($any($event.target).value)"
+          />
+        </label>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="accionEnCurso()"
+          (click)="registrarToque()"
+        >
+          {{ accionEnCurso() ? 'Registrando…' : 'Registrar toque' }}
+        </button>
+      </div>
+    }
+  </section>
+
+  <section class="embudo">
+    <h2>Embudo</h2>
+    @if (destinos().length) {
+      <div class="acciones-fila">
+        @for (destino of destinos(); track destino) {
+          <button
+            type="button"
+            class="boton-secundario"
+            [disabled]="accionEnCurso()"
+            (click)="transicionar(destino)"
+          >
+            {{ accionTransicion[destino] }}
+          </button>
+        }
+      </div>
+    } @else {
+      <p class="nota-embudo">Este contacto ya está en un estado final del embudo.</p>
+    }
+    <p class="nota-embudo">
+      El estado <strong>entrevistado</strong> no se asigna a mano: lo fija el registro de una
+      entrevista con este contacto.
+    </p>
+  </section>
+
+  @if (confirmandoBorrado()) {
+    <div class="confirmacion" role="alert">
+      <span>¿Eliminar este contacto? No se puede deshacer.</span>
+      <button
+        type="button"
+        class="boton-peligro"
+        [disabled]="accionEnCurso()"
+        (click)="confirmarEliminar()"
+      >
+        {{ accionEnCurso() ? 'Eliminando…' : 'Sí, eliminar' }}
+      </button>
+      <button type="button" class="boton-secundario" (click)="cancelarEliminar()">Cancelar</button>
+    </div>
+  } @else {
+    <div class="acciones">
+      <a class="boton-primario" [routerLink]="['/ideas', ideaId, 'contactos', c.id, 'editar']">
+        Editar
+      </a>
+      <button type="button" class="boton-secundario" (click)="pedirEliminar()">Eliminar</button>
+    </div>
+  }
+}

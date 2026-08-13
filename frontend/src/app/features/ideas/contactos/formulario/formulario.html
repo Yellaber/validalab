@@ -1,0 +1,97 @@
+<div class="cabecera">
+  <h1>{{ modoEdicion ? 'Editar contacto' : 'Nuevo contacto' }}</h1>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el contacto…</p>
+} @else {
+  <form (submit)="onSubmit(); $event.preventDefault()">
+    @if (errorGeneral(); as error) {
+      <p class="error-general" role="alert">{{ error }}</p>
+    }
+
+    <label class="campo">
+      <span>Nombre</span>
+      <input type="text" [formField]="formulario.nombre" />
+      @if (formulario.nombre().touched() && formulario.nombre().errors().length) {
+        <small class="campo-error">{{ formulario.nombre().errors()[0].message }}</small>
+      } @else if (erroresCampo()['nombre']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Perfil <em>(opcional)</em></span>
+      <input type="text" placeholder="Cargo o segmento" [formField]="formulario.perfil" />
+      @if (erroresCampo()['perfil']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Enlace <em>(opcional)</em></span>
+      <input type="text" placeholder="Perfil o correo" [formField]="formulario.enlace" />
+      @if (erroresCampo()['enlace']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Canal</span>
+      <select [formField]="formulario.canal">
+        @for (c of canales; track c) {
+          <option [value]="c">{{ etiquetaCanal[c] }}</option>
+        }
+      </select>
+      @if (erroresCampo()['canal']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Origen</span>
+      <select [value]="modelo().origen" (change)="cambiarOrigen($any($event.target).value)">
+        @for (o of origenes; track o) {
+          <option [value]="o">{{ etiquetaOrigen[o] }}</option>
+        }
+      </select>
+      @if (erroresCampo()['origen']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    @if (esReferido()) {
+      <label class="campo">
+        <span>Referido por <em>(contacto de esta idea)</em></span>
+        <select [formField]="formulario.referidoPorId">
+          <option value="">Sin especificar</option>
+          @for (c of candidatos(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
+          }
+        </select>
+        @if (erroresCampo()['referidoPorId']; as msg) {
+          <small class="campo-error">{{ msg }}</small>
+        }
+      </label>
+    }
+
+    <label class="campo">
+      <span>Notas <em>(opcional)</em></span>
+      <textarea rows="3" [formField]="formulario.notas"></textarea>
+      @if (erroresCampo()['notas']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <div class="acciones">
+      <button type="submit" class="boton-primario" [disabled]="enviando() || !formulario().valid()">
+        {{ enviando() ? 'Guardando…' : modoEdicion ? 'Guardar cambios' : 'Crear contacto' }}
+      </button>
+      @if (modoEdicion && id) {
+        <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'contactos', id]">Cancelar</a>
+      } @else {
+        <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'contactos']">Cancelar</a>
+      }
+    </div>
+  </form>
+}

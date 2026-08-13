@@ -76,6 +76,47 @@ describe('rutas del portafolio', () => {
     expect(harness.fixture.nativeElement.textContent).toContain('Umbrales kill/go');
   });
 
+  it('con sesión, los contactos de una idea cuelgan del shell con carga diferida', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/contactos');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    ctrl
+      .expectOne((r) => r.url.endsWith('/ideas/i1/contactos'))
+      .flush({ datos: [], paginacion: { pagina: 1, porPagina: 20, total: 0, totalPaginas: 0 } });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/contactos');
+    expect(harness.fixture.nativeElement.textContent).toContain('Contactos');
+  });
+
+  it('con sesión, el detalle de un contacto cuelga del shell', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/contactos/c1');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    ctrl
+      .expectOne((r) => r.url.endsWith('/ideas/i1/contactos/c1'))
+      .flush({
+        id: 'c1',
+        ideaId: 'i1',
+        nombre: 'Ana Ruiz',
+        canal: 'linkedin',
+        origen: 'busqueda_directa',
+        estado: 'por_contactar',
+        fechaCreacion: '2026-01-01T00:00:00.000Z',
+        fechaActualizacion: '2026-01-01T00:00:00.000Z',
+      });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/contactos/c1');
+    expect(harness.fixture.nativeElement.textContent).toContain('Ana Ruiz');
+  });
+
   it('sin sesión, las rutas anidadas de una idea redirigen a /login', async () => {
     setup(false);
     const harness = await RouterTestingHarness.create();
