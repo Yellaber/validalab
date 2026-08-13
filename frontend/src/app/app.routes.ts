@@ -51,6 +51,30 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/ideas/umbrales/umbrales').then((m) => m.UmbralesIdea),
       },
+      {
+        path: 'ideas/:id/contactos',
+        loadComponent: () =>
+          import('./features/ideas/contactos/lista/lista').then((m) => m.ListaContactos),
+      },
+      {
+        path: 'ideas/:id/contactos/nuevo',
+        loadComponent: () =>
+          import('./features/ideas/contactos/formulario/formulario').then(
+            (m) => m.FormularioContacto,
+          ),
+      },
+      {
+        path: 'ideas/:id/contactos/:idContacto',
+        loadComponent: () =>
+          import('./features/ideas/contactos/detalle/detalle').then((m) => m.DetalleContacto),
+      },
+      {
+        path: 'ideas/:id/contactos/:idContacto/editar',
+        loadComponent: () =>
+          import('./features/ideas/contactos/formulario/formulario').then(
+            (m) => m.FormularioContacto,
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

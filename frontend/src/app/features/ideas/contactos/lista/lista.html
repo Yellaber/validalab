@@ -1,0 +1,98 @@
+<div class="cabecera">
+  <h1>Contactos</h1>
+  <div class="acciones-fila">
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+    <a class="boton-primario" [routerLink]="['/ideas', ideaId, 'contactos', 'nuevo']">
+      Nuevo contacto
+    </a>
+  </div>
+</div>
+
+<p class="intro">
+  El embudo de outreach de esta idea. Registra a quién contactas y hasta dónde llega cada
+  conversación: de aquí salen las tasas de respuesta y de agendamiento.
+</p>
+
+<div class="filtros">
+  <label for="filtro-estado">Filtrar por estado</label>
+  <select id="filtro-estado" (change)="cambiarFiltro($any($event.target).value)">
+    <option value="">Todos</option>
+    @for (estado of estados; track estado) {
+      <option [value]="estado">{{ etiquetaEstado[estado] }}</option>
+    }
+  </select>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando los contactos…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else {
+      <p>No se pudieron cargar los contactos. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+  </div>
+} @else if (vacio()) {
+  <div class="vacio">
+    <p>Todavía no has registrado contactos para esta idea.</p>
+    <a class="boton-primario" [routerLink]="['/ideas', ideaId, 'contactos', 'nuevo']">
+      Registra el primero
+    </a>
+  </div>
+} @else {
+  <ul class="lista">
+    @for (f of filas(); track f.contacto.id) {
+      <li>
+        <a class="tarjeta" [routerLink]="['/ideas', ideaId, 'contactos', f.contacto.id]">
+          <span class="estado estado-{{ f.contacto.estado }}">
+            {{ etiquetaEstado[f.contacto.estado] }}
+          </span>
+          <h2>{{ f.contacto.nombre }}</h2>
+          <p class="meta">
+            @if (f.contacto.perfil) {
+              <span>{{ f.contacto.perfil }}</span>
+            }
+            <span>{{ etiquetaCanal[f.contacto.canal] }}</span>
+            <span>
+              @if (f.toques === 0) {
+                Sin toques
+              } @else if (f.toques === 1) {
+                1 toque
+              } @else {
+                2 toques (límite)
+              }
+            </span>
+          </p>
+        </a>
+      </li>
+    }
+  </ul>
+
+  @if (paginacion(); as pag) {
+    <nav class="paginacion" aria-label="Paginación de contactos">
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina <= 1"
+        (click)="paginaAnterior()"
+      >
+        Anterior
+      </button>
+      <span>Página {{ pag.pagina }} de {{ pag.totalPaginas }}</span>
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina >= pag.totalPaginas"
+        (click)="paginaSiguiente()"
+      >
+        Siguiente
+      </button>
+    </nav>
+  }
+}
