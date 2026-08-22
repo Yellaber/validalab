@@ -1,0 +1,122 @@
+<div class="cabecera">
+  <h1>{{ modoEdicion ? 'Editar guión' : 'Nuevo guión' }}</h1>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el guión…</p>
+} @else {
+  <form (submit)="onSubmit(); $event.preventDefault()">
+    @if (errorGeneral(); as error) {
+      <p class="error-general" role="alert">{{ error }}</p>
+    }
+
+    <label class="campo">
+      <span>Nombre</span>
+      <input type="text" [formField]="formulario.nombre" />
+      @if (formulario.nombre().touched() && formulario.nombre().errors().length) {
+        <small class="campo-error">{{ formulario.nombre().errors()[0].message }}</small>
+      } @else if (erroresCampo()['nombre']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Descripción <em>(opcional)</em></span>
+      <textarea rows="2" [formField]="formulario.descripcion"></textarea>
+      @if (erroresCampo()['descripcion']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <fieldset class="preguntas">
+      <legend>Preguntas</legend>
+      <p class="nota-preguntas">
+        El orden es el de esta lista: numeramos las preguntas al guardar, así que no tienes que
+        llevar la cuenta.
+        @if (!puedeQuitar()) {
+          Un guión necesita al menos una pregunta, por eso no puedes quitar la última.
+        }
+      </p>
+
+      <ul class="filas-pregunta">
+        <!--
+          Se recorre el modelo plano, no `formulario.preguntas`: resolver el estado de
+          un campo dentro del `track` revienta con NG01904 (campo huérfano) en cuanto
+          el arreglo se reordena o encoge. La clave local vive en el modelo, así que
+          basta para trackear, y el campo se enlaza por índice —ambos arreglos van a la
+          par—, conservando la identidad de la fila al moverla.
+        -->
+        @for (fila of modelo().preguntas; track fila.claveLocal) {
+          <li class="fila-pregunta">
+            <span class="orden" aria-hidden="true">{{ $index + 1 }}.</span>
+
+            <span class="texto">
+              <input
+                type="text"
+                [formField]="formulario.preguntas[$index].texto"
+                [attr.aria-label]="'Pregunta ' + ($index + 1)"
+                placeholder="¿Qué quieres averiguar?"
+              />
+              @if (
+                formulario.preguntas[$index].texto().touched() &&
+                formulario.preguntas[$index].texto().errors().length
+              ) {
+                <small class="campo-error">
+                  {{ formulario.preguntas[$index].texto().errors()[0].message }}
+                </small>
+              } @else if (errorDeFila($index); as msg) {
+                <small class="campo-error">{{ msg }}</small>
+              }
+            </span>
+
+            <span class="controles-fila">
+              <button
+                type="button"
+                class="control-fila"
+                [disabled]="$first"
+                [attr.aria-label]="'Subir la pregunta ' + ($index + 1)"
+                (click)="moverPregunta($index, -1)"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="control-fila"
+                [disabled]="$last"
+                [attr.aria-label]="'Bajar la pregunta ' + ($index + 1)"
+                (click)="moverPregunta($index, 1)"
+              >
+                ↓
+              </button>
+              @if (puedeQuitar()) {
+                <button
+                  type="button"
+                  class="control-fila quitar"
+                  [attr.aria-label]="'Quitar la pregunta ' + ($index + 1)"
+                  (click)="quitarPregunta($index)"
+                >
+                  ×
+                </button>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+
+      <button type="button" class="boton-secundario anadir-pregunta" (click)="anadirPregunta()">
+        Añadir pregunta
+      </button>
+    </fieldset>
+
+    <div class="acciones">
+      <button type="submit" class="boton-primario" [disabled]="enviando() || !formulario().valid()">
+        {{ enviando() ? 'Guardando…' : modoEdicion ? 'Guardar cambios' : 'Crear guión' }}
+      </button>
+      @if (modoEdicion && id) {
+        <a class="boton-secundario" [routerLink]="['/guiones', id]">Cancelar</a>
+      } @else {
+        <a class="boton-secundario" routerLink="/guiones">Cancelar</a>
+      }
+    </div>
+  </form>
+}

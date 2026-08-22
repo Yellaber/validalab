@@ -48,7 +48,7 @@ const esquemaHipotesis = schema<ModeloHipotesis>((ruta) => {
   imports: [FormField, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './hipotesis.html',
-  styleUrls: ['../ideas.css', './hipotesis.css'],
+  styleUrls: ['../../../shared/dominio.css', './hipotesis.css'],
 })
 export class HipotesisIdea {
   private readonly hipotesis = inject(HipotesisService);

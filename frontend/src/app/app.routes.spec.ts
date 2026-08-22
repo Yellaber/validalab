@@ -125,3 +125,81 @@ describe('rutas del portafolio', () => {
     expect(TestBed.inject(Router).url).toBe('/login');
   });
 });
+
+const guion = {
+  id: 'g1',
+  ownerId: 'u1',
+  nombre: 'Descubrimiento de dolor',
+  preguntas: [{ id: 'p1', orden: 1, texto: '¿Cómo lo resuelves hoy?' }],
+  fechaCreacion: '2026-01-01T00:00:00.000Z',
+  fechaActualizacion: '2026-01-01T00:00:00.000Z',
+};
+
+describe('rutas de guiones', () => {
+  it('con sesión, el listado de guiones cuelga del shell con carga diferida', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/guiones');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    ctrl
+      .expectOne((r) => r.url.endsWith('/guiones'))
+      .flush({ datos: [], paginacion: { pagina: 1, porPagina: 20, total: 0, totalPaginas: 0 } });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/guiones');
+    expect(harness.fixture.nativeElement.textContent).toContain('Guiones');
+  });
+
+  it('`guiones/nuevo` abre el alta y no se resuelve como un identificador', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/guiones/nuevo');
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/guiones/nuevo');
+    expect(harness.fixture.nativeElement.textContent).toContain('Nuevo guión');
+    // Si `:idGuion` hubiera ganado, el alta habría pedido el guión «nuevo».
+    TestBed.inject(HttpTestingController).expectNone((r) => r.url.endsWith('/guiones/nuevo'));
+  });
+
+  it('con sesión, el detalle de un guión cuelga del shell', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/guiones/g1');
+    harness.detectChanges();
+
+    TestBed.inject(HttpTestingController)
+      .expectOne((r) => r.url.endsWith('/guiones/g1'))
+      .flush(guion);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/guiones/g1');
+    expect(harness.fixture.nativeElement.textContent).toContain('Descubrimiento de dolor');
+  });
+
+  it('con sesión, la edición de un guión cuelga del shell', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/guiones/g1/editar');
+    harness.detectChanges();
+
+    TestBed.inject(HttpTestingController)
+      .expectOne((r) => r.url.endsWith('/guiones/g1'))
+      .flush(guion);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/guiones/g1/editar');
+    expect(harness.fixture.nativeElement.textContent).toContain('Editar guión');
+  });
+
+  it('sin sesión, las rutas de guiones redirigen a /login', async () => {
+    setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/guiones');
+
+    expect(TestBed.inject(Router).url).toBe('/login');
+  });
+});

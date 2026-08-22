@@ -18,7 +18,7 @@ import { IdeasService } from '../ideas.service';
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './detalle.html',
-  styleUrl: '../ideas.css',
+  styleUrl: '../../../shared/dominio.css',
 })
 export class DetalleIdea {
   private readonly ideas = inject(IdeasService);
