@@ -6,6 +6,8 @@ TBD - created by archiving change contrato-api-entrevistas. Update Purpose after
 ### Requirement: Gestionar guiones de entrevista reutilizables
 El contrato SHALL definir un recurso `/guiones` (autenticado, nivel de usuario) para el guión de entrevista reutilizable **entre ideas** (RF-08, HU-11), con `POST /guiones` (crear), `GET /guiones` (listar paginado), `GET /guiones/{idGuion}` (consultar), `PATCH /guiones/{idGuion}` (editar) y `DELETE /guiones/{idGuion}` (eliminar). Un guión MUST contener `preguntas` ordenadas. El `ownerId` MUST derivarse del token; un guión ajeno MUST devolver `403 ACCESO_DENEGADO`; un `idGuion` inexistente `404 RECURSO_NO_ENCONTRADO`; un payload inválido `422 VALIDACION_FALLIDA`.
 
+Un guión referenciado por **al menos una entrevista** SHALL ser inmutable en su estructura, para preservar la correspondencia entre el `preguntaId` de cada respuesta registrada y el texto que efectivamente se preguntó (RNF-15). En consecuencia: `DELETE /guiones/{idGuion}` MUST responder `409 CONFLICTO` cuando exista alguna entrevista que lo referencie, y `PATCH /guiones/{idGuion}` MUST responder `409 CONFLICTO` cuando el cuerpo incluya `preguntas` y el guión tenga alguna entrevista. El `nombre` y la `descripcion` MUST seguir siendo editables en ese caso, porque no participan en la evidencia. Un guión **sin** entrevistas MUST poder eliminarse y ver reemplazadas sus `preguntas` sin restricción.
+
 #### Scenario: Crear un guión con preguntas ordenadas
 - **WHEN** un usuario autenticado hace `POST /guiones` con un `nombre` y una lista de `preguntas` con su `orden`
 - **THEN** el contrato responde `201` con el `Guion` creado y sus preguntas ordenadas
@@ -21,6 +23,26 @@ El contrato SHALL definir un recurso `/guiones` (autenticado, nivel de usuario) 
 #### Scenario: Sin token
 - **WHEN** se hace `POST /guiones` sin `Authorization: Bearer`
 - **THEN** el contrato responde `401` con `codigo` `NO_AUTENTICADO`
+
+#### Scenario: Eliminar un guión sin entrevistas
+- **WHEN** un usuario autenticado hace `DELETE /guiones/{idGuion}` sobre un guión propio que ninguna entrevista referencia
+- **THEN** el contrato responde `204` sin contenido
+
+#### Scenario: Eliminar un guión que ya tiene evidencia
+- **WHEN** un usuario autenticado hace `DELETE /guiones/{idGuion}` sobre un guión referenciado por al menos una entrevista
+- **THEN** el contrato responde `409` con `codigo` `CONFLICTO` y el guión permanece
+
+#### Scenario: Reemplazar las preguntas de un guión sin entrevistas
+- **WHEN** un usuario autenticado hace `PATCH /guiones/{idGuion}` con `preguntas` sobre un guión que ninguna entrevista referencia
+- **THEN** el contrato responde `200` con el guión actualizado y su conjunto ordenado reemplazado
+
+#### Scenario: Reemplazar las preguntas de un guión que ya tiene evidencia
+- **WHEN** un usuario autenticado hace `PATCH /guiones/{idGuion}` incluyendo `preguntas` sobre un guión referenciado por al menos una entrevista
+- **THEN** el contrato responde `409` con `codigo` `CONFLICTO` y las preguntas permanecen sin cambios
+
+#### Scenario: Editar el nombre de un guión que ya tiene evidencia
+- **WHEN** un usuario autenticado hace `PATCH /guiones/{idGuion}` con solo `nombre` y/o `descripcion` sobre un guión referenciado por entrevistas
+- **THEN** el contrato responde `200` con el guión actualizado, porque esos campos no participan en la evidencia
 
 ### Requirement: Registrar una entrevista vinculada a idea y contacto
 El contrato SHALL definir `POST /ideas/{id}/entrevistas` (autenticado) que crea una entrevista de una idea propia (HU-13, RF-09), con `contactoId`, `guionId` y las `respuestas` capturadas (y opcionalmente `citas`). El `ideaId` MUST derivarse del path y el `ownerId` del token; el cuerpo MUST NOT permitir asignar el `score`. El `contactoId` MUST ser un contacto de la misma idea y el `guionId` un guión del mismo usuario; si la idea o el contacto no son válidos o no pertenecen al usuario, el contrato MUST responder `422 ENTREVISTA_SIN_VINCULO` (RNF-14). Crear la entrevista MUST mover el contacto al estado `entrevistado`; un contacto ya `entrevistado` o `descartado` MUST responder `409 CONFLICTO`. La respuesta exitosa MUST devolver el recurso `Entrevista`. Una idea ajena MUST devolver `403 ACCESO_DENEGADO`; un `id` de idea inexistente `404 RECURSO_NO_ENCONTRADO`; un payload mal formado `422 VALIDACION_FALLIDA`.
