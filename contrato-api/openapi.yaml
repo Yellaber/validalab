@@ -740,7 +740,23 @@ paths:
     delete:
       tags: [contactos]
       summary: Eliminar un contacto
-      description: Elimina un contacto propio registrado por error.
+      description: |
+        Elimina un contacto propio registrado por error, **siempre que ninguna entrevista lo
+        referencie**.
+
+        Si al menos una entrevista lo usa, responde `409 CONFLICTO` y el contacto permanece. Esto
+        defiende **RNF-14**: una entrevista no puede existir sin idea y contacto válidos del mismo
+        usuario. El contrato ya lo exige al crearla (`422 ENTREVISTA_SIN_VINCULO`); eliminar el
+        contacto por detrás dejaría la entrevista en ese mismo estado inválido, y además seguiría
+        alimentando los KPIs de outreach y el veredicto desde un contacto que ya no existe.
+
+        La condición es la **existencia de entrevistas que referencien el contacto**, no su `estado`:
+        un contacto en estado `entrevistado` cuyas entrevistas se hayan eliminado sí puede borrarse,
+        porque no queda ninguna referencia huérfana.
+
+        Para eliminar un contacto que ya tiene evidencia, elimina antes sus entrevistas con
+        `DELETE /ideas/{id}/entrevistas/{idEntrevista}`. Destruir evidencia es posible, pero debe ser
+        un acto deliberado y por entrevista, nunca un efecto colateral de borrar una ficha del CRM.
       operationId: eliminarContacto
       parameters:
         - $ref: '#/components/parameters/idIdea'
@@ -754,6 +770,8 @@ paths:
           $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
 
   /ideas/{id}/contactos/{idContacto}/estado:
     post:
