@@ -896,7 +896,19 @@ paths:
     patch:
       tags: [entrevistas]
       summary: Editar un guión propio
-      description: Edita el `nombre`, la `descripcion` y/o las `preguntas` (reemplazando el conjunto ordenado).
+      description: |
+        Edita el `nombre`, la `descripcion` y/o las `preguntas` (reemplazando el conjunto ordenado).
+
+        **Un guión con evidencia es inmutable en su estructura.** Si el guión ya está referenciado
+        por al menos una entrevista y el cuerpo incluye `preguntas`, responde `409 CONFLICTO` y las
+        preguntas permanecen intactas. No es una restricción burocrática: cada `RespuestaEntrevista`
+        apunta a un `preguntaId` de este guión, y como `PreguntaRequest` no lleva `id`, un reemplazo
+        rompería esa referencia. Y aunque se conservara el identificador, cambiar el **texto** de una
+        pregunta ya respondida haría que la respuesta contestara a otra cosa, corrompiendo en silencio
+        la evidencia sobre la que se calculan scores, KPIs y veredicto (RNF-15).
+
+        El `nombre` y la `descripcion` **siguen siendo editables** aunque haya entrevistas: no
+        participan en la evidencia. Un guión sin entrevistas se edita sin restricción alguna.
       operationId: actualizarGuion
       parameters:
         - $ref: '#/components/parameters/idGuion'
@@ -919,11 +931,21 @@ paths:
           $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
         '422':
           $ref: '#/components/responses/ValidacionFallida'
     delete:
       tags: [entrevistas]
       summary: Eliminar un guión propio
+      description: |
+        Elimina un guión propio **que ninguna entrevista referencie**.
+
+        Si al menos una entrevista lo usa, responde `409 CONFLICTO` y el guión permanece: borrarlo
+        dejaría colgando tanto su `guionId` como los `preguntaId` de todas las respuestas ya
+        registradas, y esas entrevistas son la evidencia desde la que deben poder reconstruirse los
+        KPIs (RNF-15). Es la misma postura que el contrato ya sostiene al permitir **archivar** una
+        idea en lugar de eliminarla.
       operationId: eliminarGuion
       parameters:
         - $ref: '#/components/parameters/idGuion'
@@ -936,6 +958,8 @@ paths:
           $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
 
   # --- Entrevistas y scoring por IA (épica E4), anidadas bajo la idea ---
 
