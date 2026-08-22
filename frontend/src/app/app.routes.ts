@@ -75,6 +75,27 @@ export const routes: Routes = [
             (m) => m.FormularioContacto,
           ),
       },
+      // Guiones: dominio de primer nivel, no cuelga de ninguna idea. `nuevo` va antes
+      // que `:idGuion` para que no se resuelva como un identificador.
+      {
+        path: 'guiones',
+        loadComponent: () => import('./features/guiones/lista/lista').then((m) => m.ListaGuiones),
+      },
+      {
+        path: 'guiones/nuevo',
+        loadComponent: () =>
+          import('./features/guiones/formulario/formulario').then((m) => m.FormularioGuion),
+      },
+      {
+        path: 'guiones/:idGuion',
+        loadComponent: () =>
+          import('./features/guiones/detalle/detalle').then((m) => m.DetalleGuion),
+      },
+      {
+        path: 'guiones/:idGuion/editar',
+        loadComponent: () =>
+          import('./features/guiones/formulario/formulario').then((m) => m.FormularioGuion),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

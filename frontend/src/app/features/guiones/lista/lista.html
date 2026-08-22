@@ -1,0 +1,67 @@
+<div class="cabecera">
+  <h1>Guiones</h1>
+  <a class="boton-primario" routerLink="/guiones/nuevo">Nuevo guión</a>
+</div>
+
+<p class="intro">
+  Los guiones son tuyos, no de una idea: el mismo conjunto de preguntas se reutiliza entre ideas
+  para que las entrevistas sean comparables.
+</p>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando los guiones…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    <p>No se pudieron cargar los guiones. ({{ err.codigo }})</p>
+    <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+  </div>
+} @else if (vacio()) {
+  <div class="vacio">
+    <p>Todavía no has creado ningún guión.</p>
+    <a class="boton-primario" routerLink="/guiones/nuevo">Crea el primero</a>
+  </div>
+} @else {
+  <ul class="lista">
+    @for (guion of filas(); track guion.id) {
+      <li>
+        <a class="tarjeta" [routerLink]="['/guiones', guion.id]">
+          <h2>{{ guion.nombre }}</h2>
+          <p class="meta">
+            @if (guion.descripcion) {
+              <span>{{ guion.descripcion }}</span>
+            }
+            <span class="recuento">
+              @if (guion.preguntas.length === 1) {
+                1 pregunta
+              } @else {
+                {{ guion.preguntas.length }} preguntas
+              }
+            </span>
+          </p>
+        </a>
+      </li>
+    }
+  </ul>
+
+  @if (paginacion(); as pag) {
+    <nav class="paginacion" aria-label="Paginación de guiones">
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina <= 1"
+        (click)="paginaAnterior()"
+      >
+        Anterior
+      </button>
+      <span>Página {{ pag.pagina }} de {{ pag.totalPaginas }}</span>
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina >= pag.totalPaginas"
+        (click)="paginaSiguiente()"
+      >
+        Siguiente
+      </button>
+    </nav>
+  }
+}

@@ -85,7 +85,7 @@ function filaDe(umbral: Umbral): FilaUmbral {
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './umbrales.html',
-  styleUrls: ['../ideas.css', './umbrales.css'],
+  styleUrls: ['../../../shared/dominio.css', './umbrales.css'],
 })
 export class UmbralesIdea {
   private readonly umbrales = inject(UmbralesService);

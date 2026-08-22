@@ -1,12 +1,15 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { SesionService } from '../../core/auth/sesion.service';
 
-/** Shell autenticado: identidad del usuario, cierre de sesión y `<router-outlet>` de dominio. */
+/**
+ * Shell autenticado: navegación entre los dominios de primer nivel, identidad del
+ * usuario, cierre de sesión y `<router-outlet>` de dominio.
+ */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.css',

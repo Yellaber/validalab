@@ -1,3 +1,13 @@
+/**
+ * Estilos base de las pantallas de dominio: cabecera, botones, listas y tarjetas,
+ * campos de formulario, estados de carga/vacío/error, paginación y confirmación en
+ * línea. Cada feature añade encima su propia hoja con lo que le es propio.
+ *
+ * Vivió en `features/ideas/ideas.css` mientras `ideas` era el único dominio; se
+ * movió aquí al aparecer `guiones`, que no cuelga de una idea y necesita la misma
+ * base. Nada de lo que hay aquí es específico de un dominio.
+ */
+
 :host {
   display: block;
   max-width: 56rem;

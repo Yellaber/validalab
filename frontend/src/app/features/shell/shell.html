@@ -1,6 +1,15 @@
 <header class="barra">
   <a class="marca" routerLink="/ideas">ValidaLab</a>
 
+  <!--
+    Sin `exact: true` a propósito: `Ideas` debe seguir resaltada dentro de las rutas
+    anidadas de una idea (detalle, hipótesis, umbrales, contactos).
+  -->
+  <nav class="dominios" aria-label="Secciones">
+    <a routerLink="/ideas" routerLinkActive="activo">Ideas</a>
+    <a routerLink="/guiones" routerLinkActive="activo">Guiones</a>
+  </nav>
+
   @if (usuario(); as u) {
     <div class="identidad">
       <span class="nombre">{{ u.nombre }}</span>

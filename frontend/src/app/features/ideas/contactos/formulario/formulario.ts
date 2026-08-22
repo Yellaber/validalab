@@ -42,7 +42,7 @@ const CANDIDATOS_POR_PAGINA = 100;
   imports: [FormField, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './formulario.html',
-  styleUrls: ['../../ideas.css', '../contactos.css'],
+  styleUrls: ['../../../../shared/dominio.css', '../contactos.css'],
 })
 export class FormularioContacto {
   private readonly contactos = inject(ContactosService);

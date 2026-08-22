@@ -28,7 +28,7 @@ interface VistaContacto {
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './lista.html',
-  styleUrls: ['../../ideas.css', '../contactos.css'],
+  styleUrls: ['../../../../shared/dominio.css', '../contactos.css'],
 })
 export class ListaContactos {
   private readonly contactos = inject(ContactosService);

@@ -34,7 +34,7 @@ type Operacion = 'transicion' | 'toque' | 'eliminar';
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './detalle.html',
-  styleUrls: ['../../ideas.css', '../contactos.css'],
+  styleUrls: ['../../../../shared/dominio.css', '../contactos.css'],
 })
 export class DetalleContacto {
   private readonly contactos = inject(ContactosService);

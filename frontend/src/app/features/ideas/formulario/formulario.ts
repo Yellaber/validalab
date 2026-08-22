@@ -26,7 +26,7 @@ interface ModeloIdea {
   imports: [FormField, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './formulario.html',
-  styleUrl: '../ideas.css',
+  styleUrl: '../../../shared/dominio.css',
 })
 export class FormularioIdea {
   private readonly ideas = inject(IdeasService);
