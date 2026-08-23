@@ -75,6 +75,28 @@ export const routes: Routes = [
             (m) => m.FormularioContacto,
           ),
       },
+      // Entrevistas: `nueva` va antes que `:idEntrevista` para que no se resuelva
+      // como un identificador.
+      {
+        path: 'ideas/:id/entrevistas',
+        loadComponent: () =>
+          import('./features/ideas/entrevistas/lista/lista').then((m) => m.ListaEntrevistas),
+      },
+      {
+        path: 'ideas/:id/entrevistas/nueva',
+        loadComponent: () =>
+          import('./features/ideas/entrevistas/alta/alta').then((m) => m.AltaEntrevista),
+      },
+      {
+        path: 'ideas/:id/entrevistas/:idEntrevista',
+        loadComponent: () =>
+          import('./features/ideas/entrevistas/detalle/detalle').then((m) => m.DetalleEntrevista),
+      },
+      {
+        path: 'ideas/:id/entrevistas/:idEntrevista/editar',
+        loadComponent: () =>
+          import('./features/ideas/entrevistas/edicion/edicion').then((m) => m.EdicionEntrevista),
+      },
       // Guiones: dominio de primer nivel, no cuelga de ninguna idea. `nuevo` va antes
       // que `:idGuion` para que no se resuelva como un identificador.
       {

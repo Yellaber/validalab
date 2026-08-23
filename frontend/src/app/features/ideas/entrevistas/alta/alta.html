@@ -1,0 +1,92 @@
+<div class="cabecera">
+  <h1>Registrar entrevista</h1>
+</div>
+
+@if (catalogos.cargando()) {
+  <p class="cargando" role="status">Cargando contactos y guiones…</p>
+} @else if (sinEntrevistables()) {
+  <div class="sin-entrevistables">
+    <p>
+      Ningún contacto de esta idea puede entrevistarse ahora mismo: todos están ya entrevistados o
+      descartados.
+    </p>
+    <a class="boton-primario" [routerLink]="['/ideas', ideaId, 'contactos']">
+      Ir a los contactos
+    </a>
+  </div>
+} @else {
+  <form (submit)="onSubmit(); $event.preventDefault()">
+    @if (errorGeneral(); as error) {
+      <p class="error-general" role="alert">{{ error }}</p>
+    }
+
+    <label class="campo">
+      <span>Contacto entrevistado</span>
+      <select [value]="contactoId()" (change)="cambiarContacto($any($event.target).value)">
+        <option value="">Elige un contacto</option>
+        @for (c of catalogos.entrevistables(); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+        }
+      </select>
+      @if (erroresCampo()['contactoId']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Guión usado</span>
+      <select [value]="guionId()" (change)="cambiarGuion($any($event.target).value)">
+        <option value="">Elige un guión</option>
+        @for (g of catalogos.guiones(); track g.id) {
+          <option [value]="g.id">{{ g.nombre }}</option>
+        }
+      </select>
+      @if (erroresCampo()['guionId']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    @if (guionPorConfirmar() !== null) {
+      <p class="confirmacion" role="alert">
+        Cambiar de guión sustituye las preguntas y se perderán las respuestas escritas.
+        <button type="button" class="boton-peligro" (click)="confirmarCambioDeGuion()">
+          Cambiar de todos modos
+        </button>
+        <button type="button" class="boton-secundario" (click)="cancelarCambioDeGuion()">
+          Cancelar
+        </button>
+      </p>
+    }
+
+    @if (respuestas().length) {
+      <fieldset class="citas">
+        <legend>Respuestas</legend>
+        <ul class="preguntas-respuesta">
+          @for (fila of respuestas(); track fila.pregunta.id) {
+            <li class="pregunta-respuesta">
+              <label>
+                <span class="enunciado">
+                  <span class="indice">{{ $index + 1 }}.</span> {{ fila.pregunta.texto }}
+                </span>
+                <textarea
+                  rows="2"
+                  [value]="fila.texto"
+                  (input)="cambiarRespuesta(fila.pregunta.id, $any($event.target).value)"
+                ></textarea>
+              </label>
+            </li>
+          }
+        </ul>
+      </fieldset>
+    }
+
+    <app-editor-citas [(filas)]="citas" />
+
+    <div class="acciones">
+      <button type="submit" class="boton-primario" [disabled]="!puedeGuardar()">
+        {{ enviando() ? 'Registrando…' : 'Registrar entrevista' }}
+      </button>
+      <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas']">Cancelar</a>
+    </div>
+  </form>
+}

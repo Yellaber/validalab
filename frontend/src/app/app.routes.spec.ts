@@ -195,6 +195,55 @@ describe('rutas de guiones', () => {
     expect(harness.fixture.nativeElement.textContent).toContain('Editar guión');
   });
 
+  it('con sesión, el listado de entrevistas de una idea cuelga del shell', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/entrevistas');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    const vacia = {
+      datos: [],
+      paginacion: { pagina: 1, porPagina: 20, total: 0, totalPaginas: 0 },
+    };
+    ctrl.expectOne((r) => r.url.endsWith('/ideas/i1/entrevistas')).flush(vacia);
+    ctrl.expectOne((r) => r.url.endsWith('/ideas/i1/contactos')).flush(vacia);
+    ctrl.expectOne((r) => r.url.endsWith('/guiones')).flush(vacia);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/entrevistas');
+    expect(harness.fixture.nativeElement.textContent).toContain('Entrevistas');
+  });
+
+  it('`entrevistas/nueva` abre el alta y no se resuelve como un identificador', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/entrevistas/nueva');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    const vacia = {
+      datos: [],
+      paginacion: { pagina: 1, porPagina: 20, total: 0, totalPaginas: 0 },
+    };
+    ctrl.expectOne((r) => r.url.endsWith('/ideas/i1/contactos')).flush(vacia);
+    ctrl.expectOne((r) => r.url.endsWith('/guiones')).flush(vacia);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/entrevistas/nueva');
+    expect(harness.fixture.nativeElement.textContent).toContain('Registrar entrevista');
+    // Si `:idEntrevista` hubiera ganado, se habría pedido la entrevista «nueva».
+    ctrl.expectNone((r) => r.url.endsWith('/entrevistas/nueva'));
+  });
+
+  it('sin sesión, las rutas de entrevistas redirigen a /login', async () => {
+    setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/entrevistas');
+
+    expect(TestBed.inject(Router).url).toBe('/login');
+  });
+
   it('sin sesión, las rutas de guiones redirigen a /login', async () => {
     setup(false);
     const harness = await RouterTestingHarness.create();
