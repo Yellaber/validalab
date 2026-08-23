@@ -119,6 +119,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/ideas/veredicto/detalle/detalle').then((m) => m.DetalleVeredicto),
       },
+      {
+        path: 'ideas/:id/costo',
+        loadComponent: () =>
+          import('./features/costo/idea/costo-idea').then((m) => m.CostoIdeaComponent),
+      },
       // Guiones: dominio de primer nivel, no cuelga de ninguna idea. `nuevo` va antes
       // que `:idGuion` para que no se resuelva como un identificador.
       {
@@ -147,6 +152,12 @@ export const routes: Routes = [
           import('./features/proveedores/configuracion/configuracion').then(
             (m) => m.ConfiguracionByokComponent,
           ),
+      },
+      // Costo estimado total del usuario: dominio de primer nivel.
+      {
+        path: 'costo',
+        loadComponent: () =>
+          import('./features/costo/usuario/costo-usuario').then((m) => m.CostoUsuarioComponent),
       },
     ],
   },
