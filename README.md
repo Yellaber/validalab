@@ -126,7 +126,9 @@ contrato-api/openapi.yaml   ← navegable por tags de dominio
 ```
 
 Los `tags` corresponden a los módulos de dominio: `usuarios`, `ideas`, `contactos`,
-`entrevistas`, `kpis`, `agente`, `proveedores`.
+`entrevistas`, `kpis`, `agente`, `proveedores`. Se les suma `sistema`, el único `tag` que **no** es
+un módulo de dominio: agrupa el ciclo de vida de la instalación (hoy, la inicialización del sistema
+y la creación de su cuenta administradora de origen).
 
 **Convenciones transversales** (el detalle vive en el OpenAPI):
 
