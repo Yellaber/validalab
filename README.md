@@ -11,9 +11,11 @@ El proyecto es **multi-tenant desde la primera versión** — autenticación, RB
 por `owner_id` en cada consulta. Ningún usuario ve datos de otro.
 
 > [!NOTE]
-> **Estado:** desarrollo inicial. El monorepo está andamiado (Angular 22 + NestJS 11) y el
-> contrato de API está definido; el código de dominio se construye siguiendo el orden de
-> épicos del SRS (ver [Roadmap](#roadmap)).
+> **Dónde ver qué está implementado.** Este README describe el producto, el stack y cómo
+> trabajar en él. El alcance construido en cada momento vive en las **capacidades vigentes**
+> de `openspec/specs/` (raíz y de cada paquete) y en el [`CHANGELOG.md`](CHANGELOG.md), que
+> son las fuentes que se actualizan solas con el flujo de trabajo. El [Roadmap](#roadmap) de
+> abajo lista **prioridades** del SRS, no avance.
 
 ---
 

@@ -20,22 +20,35 @@ npm run lint         # eslint --fix sobre {src,apps,libs,test}/**/*.ts
 npm run format       # prettier --write sobre src + test
 ```
 
+Base de datos (PostgreSQL + TypeORM). El esquema lo gobiernan las migraciones y **no se aplican solas al arrancar** (`migrationsRun: false`), así que `migration:run` es un paso obligatorio en cualquier entorno nuevo:
+
+```bash
+docker compose up -d            # PostgreSQL local para desarrollo (lee el .env de este directorio)
+npm run migration:run           # aplica las migraciones pendientes
+npm run migration:show          # lista aplicadas y pendientes
+npm run migration:generate -- src/database/migrations/<Nombre>   # genera a partir del diff de entidades
+npm run migration:create -- src/database/migrations/<Nombre>     # crea una vacía
+npm run migration:revert        # revierte la última aplicada
+```
+
 Tests (Jest + ts-jest):
 
 ```bash
-npm test                                # todas las specs unitarias (*.spec.ts bajo src/)
-npm run test:watch                      # modo watch
-npm run test:cov                        # con cobertura (salida a ../coverage)
-npm run test:e2e                        # specs e2e bajo test/ (config aparte: test/jest-e2e.json)
-npm test -- src/app.controller.spec.ts  # ejecuta un único archivo de spec
-npm test -- -t "name of the test"       # ejecuta los tests que coincidan con un patrón de nombre
+npm test                                        # todas las specs unitarias (*.spec.ts bajo src/)
+npm run test:watch                              # modo watch
+npm run test:cov                                # con cobertura (salida a ../coverage)
+npm run test:e2e                                # specs e2e bajo test/ (config: test/jest-e2e.js)
+npm test -- src/usuarios/usuario/usuarios.service.spec.ts   # un único archivo de spec
+npm test -- -t "name of the test"               # los tests que coincidan con un patrón de nombre
 ```
 
-La configuración de los tests unitarios vive en línea en `package.json` (`rootDir: src`, `testRegex: .*\.spec\.ts$`). Los tests e2e usan `test/jest-e2e.json` y `rootDir: .` — mantén las specs unitarias junto al código fuente y las e2e en `test/`.
+La configuración de los tests unitarios vive en línea en `package.json` (`rootDir: src`, `testRegex: .*\.spec\.ts$`). Los e2e usan `test/jest-e2e.js` y `rootDir: .` — mantén las specs unitarias junto al código fuente y las e2e en `test/`.
+
+La suite e2e **exige un PostgreSQL accesible**: levanta la aplicación completa, crea su propia base de test, aplica las migraciones y la limpia entre pruebas. Si no hay base, falla en vez de omitirse. Corre en serie a propósito (comparten base); el porqué está comentado en `test/jest-e2e.js`. El comando **no** tolera la ausencia de specs: sin pruebas, falla.
 
 ## Arquitectura
 
-Esto es un andamiaje de **NestJS 11** con solo el `AppController`/`AppService` por defecto hasta ahora — sin código de dominio, sin persistencia, sin autenticación. `src/main.ts` arranca `AppModule`. Al construir, la estructura la manda el SRS (ver documento raíz), aún no presente en el árbol:
+API **NestJS 11**. `src/main.ts` crea la app, aplica `configurarApp` —la configuración compartida con la suite e2e, para que las pruebas ejerzan la misma aplicación que se despliega—, habilita CORS, monta Swagger y escucha. La estructura la manda el SRS (ver documento raíz):
 
 - **Modular por dominio (RNF-10).** Un módulo Nest por contexto acotado: `usuarios`, `ideas`, `contactos`, `entrevistas`, `kpis`, `agente`, `proveedores`. Cablea cada uno como módulo de funcionalidad importado por `AppModule`.
 - **Organización de archivos dentro de un módulo.** Cuando un módulo crece más allá de unos pocos archivos, agrúpalos en **subcarpetas** en vez de dejarlos planos, manteniendo el `*.module.ts` (y los tipos base compartidos, p. ej. `claims.ts`) en la raíz del módulo. El **eje** de agrupación depende de la naturaleza del módulo:
@@ -49,7 +62,7 @@ Esto es un andamiaje de **NestJS 11** con solo el `AppController`/`AppService` p
 - **Capa agéntica agnóstica del proveedor (RNF-06).** Una capa de abstracción oculta las diferencias entre Anthropic/OpenAI/Google detrás de un adaptador común, seleccionado por usuario según su config BYOK. Añadir un cuarto proveedor no debe propagarse. Las listas curadas de modelos son configurables en tiempo de ejecución — **nunca cablear nombres de modelos en código**.
 - **La persistencia es PostgreSQL con TypeORM** (entidades/repositorios por decoradores, inyectables vía DI de Nest). El esquema se versiona con **migraciones de TypeORM** como fuente de verdad — `synchronize: true` jamás fuera de un arranque local desechable. El filtrado por `owner_id` se aplica en cada consulta del repositorio, sin excepción. Los KPIs deben ser reconstruibles desde las entrevistas que los originan (RNF-15); una entrevista no puede existir sin una idea + contacto válidos del mismo usuario (RNF-14). Cuando un usuario ajusta un score del agente, se conservan ambos valores y el manual prevalece en el cálculo de KPIs.
 
-Construye en el orden de épicos del SRS: cuentas/aislamiento (E0) → ideas (E1) → hipótesis/umbrales (E2) → CRM de contactos (E3) → entrevistas + scoring por IA (E4) → KPIs/tablero (E5) → veredicto (E6) → config BYOK (E7).
+El orden de prioridad del SRS para el camino crítico es: cuentas/aislamiento (E0) → ideas (E1) → hipótesis/umbrales (E2) → CRM de contactos (E3) → entrevistas + scoring por IA (E4) → KPIs/tablero (E5) → veredicto (E6) → config BYOK (E7) → costo/optimización (E8). Qué capacidades existen ya está en `openspec/specs/`, no aquí.
 
 Mantén los identificadores de dominio en **español** para coincidir con el SRS (`idea`, `hipótesis`, `entrevista`, `veredicto`, `umbral`, `score`, `contacto`).
 
