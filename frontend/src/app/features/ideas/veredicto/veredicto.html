@@ -1,0 +1,74 @@
+<div class="cabecera">
+  <h1>Veredicto del Validador Inteligente</h1>
+  <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+</div>
+
+<p class="contexto">
+  El agente pondera los KPIs del tablero y propone un juicio <strong>go / pivote / kill</strong>.
+  Es consultivo: el estado de la idea no cambia hasta que apruebas el veredicto.
+</p>
+
+@if (errorAccion(); as msg) {
+  <p class="error-general" role="alert">{{ msg }}</p>
+}
+
+<div class="acciones">
+  <button type="button" class="boton-primario" [disabled]="emitiendo()" (click)="emitir()">
+    {{ emitiendo() ? 'Consultando al agente…' : 'Emitir veredicto' }}
+  </button>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el historial…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+    } @else {
+      <p>No se pudo cargar el historial de veredictos. ({{ err.codigo }})</p>
+    }
+    <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+  </div>
+} @else if (vacio()) {
+  <p class="vacio">
+    Aún no has emitido ningún veredicto para esta idea. Cuando tengas evidencia en el tablero,
+    pide al agente que la pondere.
+  </p>
+} @else {
+  <ul class="lista" aria-label="Historial de veredictos">
+    @for (v of historial(); track v.id) {
+      <li>
+        <a class="fila" [routerLink]="['/ideas', ideaId, 'veredictos', v.id]">
+          <span class="veredicto veredicto-{{ v.veredicto }}">{{ etiquetaTipo[v.veredicto] }}</span>
+          <span class="estado">{{ etiquetaEstado[v.estadoVerificacion] }}</span>
+          <span class="confianza">Confianza {{ v.confianza }}%</span>
+          <span class="fecha">{{ v.fechaEmision.slice(0, 10) }}</span>
+        </a>
+      </li>
+    }
+  </ul>
+
+  @if (paginacion(); as pag) {
+    <nav class="paginacion" aria-label="Paginación del historial">
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina <= 1"
+        (click)="paginaAnterior()"
+      >
+        Anterior
+      </button>
+      <span>Página {{ pag.pagina }} de {{ pag.totalPaginas }}</span>
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina >= pag.totalPaginas"
+        (click)="paginaSiguiente()"
+      >
+        Siguiente
+      </button>
+    </nav>
+  }
+}

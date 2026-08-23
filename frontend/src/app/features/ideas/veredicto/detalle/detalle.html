@@ -1,0 +1,136 @@
+<div class="cabecera">
+  <h1>Veredicto</h1>
+  <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'veredictos']">Volver al historial</a>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el veredicto…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a este veredicto.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Este veredicto no existe.</p>
+    } @else {
+      <p>No se pudo cargar el veredicto. ({{ err.codigo }})</p>
+    }
+    <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+  </div>
+} @else if (veredicto(); as v) {
+  <div class="veredicto-cabecera">
+    <span class="veredicto veredicto-{{ v.veredicto }}">{{ etiquetaTipo[v.veredicto] }}</span>
+    <span class="estado">{{ etiquetaEstado[v.estadoVerificacion] }}</span>
+    <span class="confianza">Confianza {{ v.confianza }}%</span>
+  </div>
+
+  <p class="meta">
+    Emitido el {{ v.fechaEmision.slice(0, 10) }} · {{ v.proveedor }} / {{ v.modelo }}
+  </p>
+
+  <section class="detalle">
+    <h2>Razonamiento por KPI</h2>
+    @if (justificaciones().length) {
+      <dl>
+        @for (j of justificaciones(); track j.nombre) {
+          <dt>{{ j.nombre }}</dt>
+          <dd>{{ j.lectura }}</dd>
+        }
+      </dl>
+    } @else {
+      <p class="vacio">El agente no detalló el peso de cada KPI.</p>
+    }
+  </section>
+
+  @if (v.recomendaciones.length) {
+    <section class="detalle">
+      <h2>Recomendaciones</h2>
+      <ul>
+        @for (r of v.recomendaciones; track $index) {
+          <li>{{ r }}</li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="detalle">
+    <h2>Snapshot de KPIs</h2>
+    <p class="contexto">Los KPIs congelados sobre los que el agente emitió el juicio.</p>
+    <ul class="lista" aria-label="Snapshot de KPIs">
+      @for (kpi of snapshot(); track kpi.nombre) {
+        <li class="fila">
+          <span class="nombre">{{ kpi.nombre }}</span>
+          <span class="zona zona-{{ kpi.zona }}">
+            {{ kpi.sinDatos ? 'Sin datos' : kpi.valor }}
+          </span>
+        </li>
+      }
+    </ul>
+  </section>
+
+  @if (v.verificacion; as ver) {
+    <section class="detalle verificacion">
+      <h2>Verificación</h2>
+      <p>
+        <strong>{{ ver.resultado === 'aprobado' ? 'Aprobado' : 'Anulado' }}</strong>
+        el {{ ver.fecha.slice(0, 10) }}
+      </p>
+      @if (ver.nota) {
+        <p class="nota">{{ ver.nota }}</p>
+      }
+    </section>
+  }
+
+  @if (errorAccion(); as msg) {
+    <p class="error-general" role="alert">{{ msg }}</p>
+  }
+
+  @if (pendiente()) {
+    @if (formularioAnularAbierto()) {
+      <form class="formulario-anular" (submit)="onSubmitAnular(); $event.preventDefault()">
+        <label class="campo">
+          <span>Motivo de la anulación</span>
+          <textarea
+            rows="2"
+            placeholder="¿Por qué no aceptas el veredicto del agente?"
+            [formField]="formularioAnular.nota"
+          ></textarea>
+          @if (formularioAnular.nota().touched() && formularioAnular.nota().errors().length) {
+            <small class="campo-error">{{ formularioAnular.nota().errors()[0].message }}</small>
+          } @else if (errorNota(); as msg) {
+            <small class="campo-error">{{ msg }}</small>
+          }
+        </label>
+
+        <div class="acciones">
+          <button
+            type="submit"
+            class="boton-primario"
+            [disabled]="verificando() || !formularioAnular().valid()"
+          >
+            {{ verificando() ? 'Anulando…' : 'Confirmar anulación' }}
+          </button>
+          <button type="button" class="boton-secundario" (click)="cerrarAnular()">Cancelar</button>
+        </div>
+      </form>
+    } @else {
+      <div class="acciones">
+        <button
+          type="button"
+          class="boton-primario"
+          [disabled]="verificando()"
+          (click)="aprobar()"
+        >
+          {{ verificando() ? 'Aprobando…' : 'Aprobar (cambia el estado de la idea)' }}
+        </button>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="verificando()"
+          (click)="abrirAnular()"
+        >
+          Anular
+        </button>
+      </div>
+    }
+  }
+}
