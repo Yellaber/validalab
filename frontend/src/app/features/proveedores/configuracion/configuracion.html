@@ -1,0 +1,133 @@
+<div class="cabecera">
+  <h1>Proveedor de IA (BYOK)</h1>
+</div>
+
+<p class="contexto">
+  ValidaLab usa <strong>tu</strong> cuenta del proveedor de IA. Tu API key se cifra en reposo y
+  nunca se muestra de vuelta. Elige un modelo económico para el scoring de entrevistas y uno más
+  potente para el veredicto de idea.
+</p>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando…</p>
+} @else if (errorCatalogo(); as err) {
+  <div class="error" role="alert">
+    <p>No se pudo cargar el catálogo de proveedores. ({{ err.codigo }})</p>
+    <button type="button" class="boton-secundario" (click)="catalogoRecurso.reload()">
+      Reintentar
+    </button>
+  </div>
+} @else {
+  @if (errorConfig(); as err) {
+    <p class="error-general" role="alert">
+      No se pudo cargar tu configuración actual. ({{ err.codigo }})
+    </p>
+  }
+
+  @if (apiKeyRegistrada()) {
+    <p class="aviso" role="status">
+      Ya tienes una API key registrada. Para cambiar la configuración, vuelve a introducirla.
+    </p>
+  }
+
+  @if (guardado()) {
+    <p class="exito" role="status">Configuración guardada.</p>
+  }
+
+  @if (errorGeneral(); as msg) {
+    <p class="error-general" role="alert">{{ msg }}</p>
+  }
+
+  <form class="formulario-byok" (submit)="onSubmit(); $event.preventDefault()">
+    <label class="campo">
+      <span>Proveedor</span>
+      <select [formField]="formulario.proveedor">
+        <option value="">Elige un proveedor…</option>
+        @for (p of catalogo(); track p.id) {
+          <option [value]="p.id">{{ p.nombre }}</option>
+        }
+      </select>
+      @if (formulario.proveedor().touched() && formulario.proveedor().errors().length) {
+        <small class="campo-error">{{ formulario.proveedor().errors()[0].message }}</small>
+      } @else if (erroresCampo()['proveedor']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>API key</span>
+      <input
+        type="password"
+        autocomplete="off"
+        placeholder="Tu API key del proveedor"
+        [formField]="formulario.apiKey"
+      />
+      @if (formulario.apiKey().touched() && formulario.apiKey().errors().length) {
+        <small class="campo-error">{{ formulario.apiKey().errors()[0].message }}</small>
+      } @else if (erroresCampo()['apiKey']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Modelo para scoring (económico)</span>
+      <select [formField]="formulario.modeloScoring">
+        <option value="">Elige un modelo…</option>
+        @for (m of modelosDisponibles(); track m.id) {
+          <option [value]="m.id">{{ m.nombre }}</option>
+        }
+      </select>
+      @if (formulario.modeloScoring().touched() && formulario.modeloScoring().errors().length) {
+        <small class="campo-error">{{ formulario.modeloScoring().errors()[0].message }}</small>
+      } @else if (erroresCampo()['modeloScoring']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <label class="campo">
+      <span>Modelo para veredicto (potente)</span>
+      <select [formField]="formulario.modeloVeredicto">
+        <option value="">Elige un modelo…</option>
+        @for (m of modelosDisponibles(); track m.id) {
+          <option [value]="m.id">{{ m.nombre }}</option>
+        }
+      </select>
+      @if (formulario.modeloVeredicto().touched() && formulario.modeloVeredicto().errors().length) {
+        <small class="campo-error">{{ formulario.modeloVeredicto().errors()[0].message }}</small>
+      } @else if (erroresCampo()['modeloVeredicto']; as msg) {
+        <small class="campo-error">{{ msg }}</small>
+      }
+    </label>
+
+    <div class="acciones">
+      <button type="submit" class="boton-primario" [disabled]="enviando() || !formulario().valid()">
+        {{ enviando() ? 'Validando y guardando…' : 'Guardar configuración' }}
+      </button>
+    </div>
+  </form>
+
+  @if (apiKeyRegistrada()) {
+    <section class="zona-peligro">
+      @if (confirmandoBorrado()) {
+        <p>¿Revocar tu configuración BYOK? Se borrará también tu API key cifrada.</p>
+        <div class="acciones">
+          <button
+            type="button"
+            class="boton-peligro"
+            [disabled]="eliminando()"
+            (click)="confirmarBorrado()"
+          >
+            {{ eliminando() ? 'Revocando…' : 'Sí, revocar' }}
+          </button>
+          <button type="button" class="boton-secundario" (click)="cancelarBorrado()">
+            Cancelar
+          </button>
+        </div>
+      } @else {
+        <button type="button" class="boton-secundario" (click)="pedirBorrado()">
+          Revocar configuración
+        </button>
+      }
+    </section>
+  }
+}

@@ -140,6 +140,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/guiones/formulario/formulario').then((m) => m.FormularioGuion),
       },
+      // Configuración BYOK del proveedor de IA: dominio de primer nivel del usuario.
+      {
+        path: 'configuracion',
+        loadComponent: () =>
+          import('./features/proveedores/configuracion/configuracion').then(
+            (m) => m.ConfiguracionByokComponent,
+          ),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
