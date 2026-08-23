@@ -47,7 +47,7 @@ El contrato de API es la **fuente de verdad única** que dirige el desarrollo de
 contrato-api/openapi.yaml   ← contrato completo (un solo archivo, navegable por `tags` de dominio)
 ```
 
-Los `tags` del documento corresponden a los módulos de dominio: `usuarios`, `ideas`, `contactos`, `entrevistas`, `kpis`, `agente`, `proveedores`.
+Los `tags` del documento corresponden a los módulos de dominio: `usuarios`, `ideas`, `contactos`, `entrevistas`, `kpis`, `agente`, `proveedores`. Se les suma `sistema`, el único `tag` que **no** es un módulo de dominio: agrupa el ciclo de vida de la instalación (hoy, la inicialización del sistema y la creación de su cuenta administradora de origen).
 
 **Regla anti-crecimiento de esta memoria:** aquí va **solo** el índice (arriba) y el **resumen normativo** de las convenciones transversales (abajo). El detalle voluminoso —endpoint por endpoint, esquemas concretos y el **catálogo completo de códigos de error**— vive en `contrato-api/openapi.yaml`, **no** en este archivo. Así `CLAUDE.md` se mantiene acotado y estable aunque el contrato crezca; la consulta sigue siendo **integral** porque desde este índice se alcanza todo el detalle.
 

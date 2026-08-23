@@ -72,6 +72,11 @@ tags:
     description: Validador Inteligente — scoring de entrevistas y veredicto de idea (épica E6).
   - name: proveedores
     description: Configuración BYOK del proveedor de IA, modelos y costo estimado (épicas E7, E8).
+  - name: sistema
+    description: |
+      Ciclo de vida de la **instalación**, no del dominio: operaciones que se ejecutan al poner en
+      marcha un sistema y no forman parte del uso diario. Es el único `tag` que no corresponde a un
+      módulo de dominio, y se acota deliberadamente a ese propósito.
 
 # Los endpoints se definen por dominio bajo sus `tags`, todos dentro de este mismo documento.
 # Módulo `usuarios` (épica E0) definido. Los demás módulos se irán añadiendo aquí.
@@ -1612,6 +1617,61 @@ paths:
         '503':
           $ref: '#/components/responses/ProveedorNoDisponible'
 
+  /sistema/inicializar:
+    post:
+      tags: [sistema]
+      summary: Inicializar el sistema y crear su cuenta administradora
+      description: |
+        Pone en marcha una instalación virgen: crea la cuenta administradora de origen y deja el
+        sistema marcado como inicializado. Tres reglas gobiernan esta operación y no se leen del
+        esquema:
+
+        1. **Es el único origen del rol `administrador`.** `POST /usuarios/registro` asigna siempre
+           `validador`, antes y después de la inicialización, y `PATCH /usuarios/{id}/rol` exige ya
+           ser administrador. Sin esta operación, las rutas de administración de cuentas serían
+           inalcanzables por API.
+        2. **Es de un solo uso.** Con el sistema ya inicializado responde `409 CONFLICTO` **aunque
+           el secreto de despliegue sea correcto**: el secreto autoriza la operación, no la vuelve
+           repetible. Cuando dos peticiones válidas concurren sobre un sistema virgen, como mucho
+           una crea la cuenta.
+        3. **No existe reversa.** Ninguna operación del contrato devuelve el sistema a estado no
+           inicializado ni permite una segunda cuenta administradora de origen. Promover a otros
+           administradores se hace con `PATCH /usuarios/{id}/rol` una vez existe el primero. Por eso
+           es prudente dejar **dos** administradores desde el principio: si se pierde el acceso al
+           único, el contrato no ofrece recuperación.
+
+        La protección es el `securityScheme` `bootstrapToken` (cabecera `X-Bootstrap-Token`), no la
+        ausencia de seguridad. Sin él, entre el instante en que la API queda expuesta y el instante
+        en que el operador la llama existiría una ventana en la que cualquiera podría reclamar el
+        administrador del sistema — y el candado de un solo uso haría esa pérdida irreversible.
+
+        La respuesta **no** incluye sesión: el administrador inicia sesión después por
+        `POST /usuarios/login` como cualquier otra cuenta.
+      operationId: inicializarSistema
+      security:
+        - bootstrapToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InicializarSistemaRequest'
+      responses:
+        '201':
+          description: |
+            Sistema inicializado. Devuelve la cuenta creada, con `rol` `administrador` y `estado`
+            `activo`, sin credenciales ni `accessToken` ni cookie de sesión.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '401':
+          $ref: '#/components/responses/NoAutenticado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/ValidacionFallida'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1630,6 +1690,21 @@ components:
         `Path` acotado a las rutas de sesión. El navegador la envía automáticamente a
         `/usuarios/refresh` y `/usuarios/logout`; el JavaScript del cliente NUNCA la lee ni la
         escribe. La emite `login`, la rota `refresh` y la limpia `logout`.
+    bootstrapToken:
+      type: apiKey
+      in: header
+      name: X-Bootstrap-Token
+      description: |
+        Secreto de despliegue que autoriza `POST /sistema/inicializar`, la única operación que lo
+        acepta. Su valor lo fija el operador en el entorno del despliegue —como el resto de secretos
+        del backend— y nunca viaja en el cuerpo de la petición ni en la URL.
+
+        Solo sirve mientras el sistema esté sin inicializar: después, presentarlo no permite nada
+        (la operación responde `409 CONFLICTO` con secreto válido o sin él), así que puede retirarse
+        del entorno una vez completada la puesta en marcha.
+
+        No sustituye ni es sustituido por `bearerAuth`: un `accessToken` de sesión, por muy válido
+        que sea, no autoriza la inicialización.
 
   parameters:
     pagina:
@@ -1864,6 +1939,23 @@ components:
           format: date-time
     RegistroUsuarioRequest:
       type: object
+      required: [email, nombre, password]
+      properties:
+        email:
+          type: string
+          format: email
+        nombre:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          format: password
+          minLength: 8
+    InicializarSistemaRequest:
+      type: object
+      description: |
+        Datos de la cuenta administradora de origen. Mismas reglas de validación que
+        `RegistroUsuarioRequest`: lo único que difiere entre ambas operaciones es el rol resultante.
       required: [email, nombre, password]
       properties:
         email:
