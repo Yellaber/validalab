@@ -107,6 +107,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/ideas/tablero/alertas/alertas').then((m) => m.AlertasKpi),
       },
+      // Veredicto: el historial va antes que `:idVeredicto` para que no se resuelva
+      // como un identificador.
+      {
+        path: 'ideas/:id/veredictos',
+        loadComponent: () =>
+          import('./features/ideas/veredicto/veredicto').then((m) => m.VeredictosIdea),
+      },
+      {
+        path: 'ideas/:id/veredictos/:idVeredicto',
+        loadComponent: () =>
+          import('./features/ideas/veredicto/detalle/detalle').then((m) => m.DetalleVeredicto),
+      },
       // Guiones: dominio de primer nivel, no cuelga de ninguna idea. `nuevo` va antes
       // que `:idGuion` para que no se resuelva como un identificador.
       {
