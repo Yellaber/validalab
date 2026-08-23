@@ -108,9 +108,19 @@ El contrato SHALL definir `PATCH /ideas/{id}/entrevistas/{idEntrevista}` (autent
 ### Requirement: Eliminar una entrevista
 El contrato SHALL definir `DELETE /ideas/{id}/entrevistas/{idEntrevista}` (autenticado) que elimina una entrevista propia. La respuesta exitosa MUST ser `204` sin contenido. Una idea o entrevista ajena MUST devolver `403 ACCESO_DENEGADO`; un `idEntrevista` inexistente `404 RECURSO_NO_ENCONTRADO`.
 
+Eliminar una entrevista MUST devolver el contacto vinculado al estado `agendado`, cerrando el ciclo que abre el registro (que lo mueve a `entrevistado`). El estado `agendado` NO es una elección arbitraria: el embudo prohíbe los saltos y `entrevistado` solo es alcanzable desde `agendado`, luego es el estado inmediatamente anterior. Sin esta reversión, el `409 CONFLICTO` que impide registrar una entrevista sobre un contacto ya `entrevistado` haría **irreversible** cualquier entrevista creada por error, dejando a esa persona inentrevistable de forma permanente.
+
 #### Scenario: Eliminación exitosa
 - **WHEN** un usuario autenticado hace `DELETE /ideas/{id}/entrevistas/{idEntrevista}` sobre una entrevista suya
 - **THEN** el contrato responde `204` sin contenido
+
+#### Scenario: El contacto vuelve a agendado
+- **WHEN** un usuario autenticado elimina una entrevista cuyo contacto está en estado `entrevistado`
+- **THEN** el contacto queda en estado `agendado`
+
+#### Scenario: Corregir una entrevista registrada por error
+- **WHEN** un usuario autenticado elimina una entrevista y a continuación registra otra sobre el mismo contacto
+- **THEN** el contrato acepta el nuevo registro y no responde `409`, porque el contacto ya no está en `entrevistado`
 
 ### Requirement: Ajustar el score del agente conservando ambos valores
 El contrato SHALL definir `POST /ideas/{id}/entrevistas/{idEntrevista}/ajuste-score` (autenticado) que permite al usuario ajustar el score del agente registrando `scoreAjustado` (0–10) y una `nota` con el motivo (RF-09c, HU-12b). El contrato MUST conservar **ambos** valores: el `score` original del agente y el `ajuste` del usuario. El `ajuste` MUST ser el valor que prevalece en el cálculo de los KPIs (E5). La respuesta exitosa MUST devolver la `Entrevista` con su bloque `score` original intacto y su bloque `ajuste`. Una idea o entrevista ajena MUST devolver `403 ACCESO_DENEGADO`; un `idEntrevista` inexistente `404 RECURSO_NO_ENCONTRADO`; un `scoreAjustado` fuera de rango o sin `nota` `422 VALIDACION_FALLIDA`.
