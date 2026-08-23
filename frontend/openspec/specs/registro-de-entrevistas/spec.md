@@ -166,14 +166,3 @@ El cliente SHALL ramificar los errores por su `codigo` y NO SHALL mostrar el `me
 - **WHEN** el servidor responde `422` con `codigo` `VALIDACION_FALLIDA` y `detalles`
 - **THEN** el cliente reparte los detalles sobre los campos del formulario
 
-### Requirement: Frontera con el scoring del agente
-El cliente SHALL mostrar el `estadoScoring` como etiqueta en el listado y en el detalle, y ofrecerlo como filtro. El cliente NO SHALL, en esta capacidad, renderizar el bloque `score` ni el `ajuste`, consultar repetidamente el estado para detectar su avance, ni ofrecer acciones de re-puntuado o de ajuste del score.
-
-#### Scenario: El estado se muestra sin interpretarse
-- **WHEN** el usuario ve una entrevista con `estadoScoring` `procesando`
-- **THEN** el cliente muestra esa etiqueta y no ofrece ninguna acción sobre el scoring
-
-#### Scenario: El bloque de score no se renderiza
-- **WHEN** la entrevista trae un bloque `score` con su justificación y señales
-- **THEN** el detalle no muestra ese contenido, que corresponde a la capacidad de scoring y ajuste
-
