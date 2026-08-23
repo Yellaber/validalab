@@ -2,6 +2,9 @@
   <h1>Entrevistas</h1>
   <div class="acciones-fila">
     <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas', 'reevaluacion']">
+      Re-evaluar en lote
+    </a>
     <a class="boton-primario" [routerLink]="['/ideas', ideaId, 'entrevistas', 'nueva']">
       Registrar entrevista
     </a>
