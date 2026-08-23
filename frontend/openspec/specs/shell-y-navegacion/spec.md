@@ -22,7 +22,7 @@ El cliente SHALL impedir que un usuario con sesión válida permanezca en `/logi
 - **THEN** el cliente lo redirige a la pantalla de inicio del shell
 
 ### Requirement: Shell autenticado con identidad y cierre de sesión
-El cliente SHALL presentar, para el usuario autenticado, un shell con un `<router-outlet>` para las rutas de dominio, que muestre la identidad del usuario en sesión (al menos su `nombre` o `email`) y ofrezca la acción de cerrar sesión. La ruta por defecto del shell SHALL renderizar el **listado del portafolio de ideas** (no un marcador de posición). El shell SHALL alojar las rutas hijas protegidas del dominio `ideas` (listado, alta, detalle, edición, **hipótesis de una idea**, **umbrales de una idea**, **contactos de una idea**, **detalle de un contacto**, las cuatro de **entrevistas de una idea** —listado, alta, detalle y edición— y las dos de **KPIs de una idea** —tablero y alertas—) con carga diferida, de modo que sus chunks no se carguen para un usuario sin sesión. El shell SHALL alojar además, con la misma carga diferida, las rutas hijas protegidas del dominio de primer nivel **`guiones`** (listado, alta, detalle y edición), que **no** cuelgan de ninguna idea.
+El cliente SHALL presentar, para el usuario autenticado, un shell con un `<router-outlet>` para las rutas de dominio, que muestre la identidad del usuario en sesión (al menos su `nombre` o `email`) y ofrezca la acción de cerrar sesión. La ruta por defecto del shell SHALL renderizar el **listado del portafolio de ideas** (no un marcador de posición). El shell SHALL alojar las rutas hijas protegidas del dominio `ideas` (listado, alta, detalle, edición, **hipótesis de una idea**, **umbrales de una idea**, **contactos de una idea**, **detalle de un contacto**, las cuatro de **entrevistas de una idea** —listado, alta, detalle y edición—, las dos de **KPIs de una idea** —tablero y alertas— y las dos de **veredicto de una idea** —historial y detalle de un veredicto—) con carga diferida, de modo que sus chunks no se carguen para un usuario sin sesión. El shell SHALL alojar además, con la misma carga diferida, las rutas hijas protegidas del dominio de primer nivel **`guiones`** (listado, alta, detalle y edición), que **no** cuelgan de ninguna idea.
 
 #### Scenario: El shell muestra la identidad y permite cerrar sesión
 - **WHEN** el usuario autenticado está en el shell
@@ -57,8 +57,12 @@ El cliente SHALL presentar, para el usuario autenticado, un shell con un `<route
 - **WHEN** el usuario autenticado navega al tablero de KPIs de una idea o a sus alertas
 - **THEN** el cliente activa la ruta hija correspondiente dentro del shell cargando su chunk de forma diferida
 
+#### Scenario: Las rutas de veredicto cuelgan del shell
+- **WHEN** el usuario autenticado navega al historial de veredictos de una idea o al detalle de uno de ellos
+- **THEN** el cliente activa la ruta hija correspondiente dentro del shell cargando su chunk de forma diferida
+
 ### Requirement: Navegación entre los dominios de primer nivel
-El shell SHALL ofrecer al usuario autenticado una navegación explícita entre los dominios de primer nivel de la aplicación: **Ideas** y **Guiones**. La navegación SHALL señalar cuál está activo. El destino de `Ideas` SHALL señalarse como activo también cuando el usuario esté en una ruta anidada de una idea (detalle, hipótesis, umbrales, contactos, **entrevistas**, **tablero y alertas**), de modo que el resaltado no desaparezca al profundizar en el dominio.
+El shell SHALL ofrecer al usuario autenticado una navegación explícita entre los dominios de primer nivel de la aplicación: **Ideas** y **Guiones**. La navegación SHALL señalar cuál está activo. El destino de `Ideas` SHALL señalarse como activo también cuando el usuario esté en una ruta anidada de una idea (detalle, hipótesis, umbrales, contactos, **entrevistas**, **tablero y alertas** y **veredicto**), de modo que el resaltado no desaparezca al profundizar en el dominio.
 
 #### Scenario: Navegar entre dominios
 - **WHEN** el usuario autenticado está en el portafolio de ideas y usa la navegación hacia `Guiones`
@@ -78,5 +82,9 @@ El shell SHALL ofrecer al usuario autenticado una navegación explícita entre l
 
 #### Scenario: El resaltado sobrevive al tablero de una idea
 - **WHEN** el usuario autenticado está en el tablero de KPIs de una idea
+- **THEN** la navegación sigue señalando `Ideas` como destino activo
+
+#### Scenario: El resaltado sobrevive al veredicto de una idea
+- **WHEN** el usuario autenticado está en el veredicto de una idea
 - **THEN** la navegación sigue señalando `Ideas` como destino activo
 
