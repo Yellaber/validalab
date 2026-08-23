@@ -58,6 +58,7 @@ describe('DetalleIdea', () => {
     expect(destinos).toContain('/ideas/i1/hipotesis');
     expect(destinos).toContain('/ideas/i1/umbrales');
     expect(destinos).toContain('/ideas/i1/contactos');
+    expect(destinos).toContain('/ideas/i1/entrevistas');
   });
 
   it('archivar llama al endpoint y refleja el estado archivada', async () => {

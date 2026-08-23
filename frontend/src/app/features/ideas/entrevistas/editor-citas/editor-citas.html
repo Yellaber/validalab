@@ -1,0 +1,45 @@
+<fieldset class="citas">
+  <legend>Citas textuales <em>(opcional)</em></legend>
+  <p class="nota-citas">
+    Frases literales del entrevistado. Son la evidencia cualitativa que sostiene el score, así que
+    conviene copiarlas tal cual se dijeron.
+  </p>
+
+  <!--
+    Se recorre el arreglo plano y se enlaza por índice, con la clave local como `track`:
+    resolver estado dentro del `track` reventaría al eliminar filas (NG01904).
+  -->
+  <ul class="filas-cita">
+    @for (fila of filas(); track fila.claveLocal) {
+      <li class="fila-cita">
+        <span class="campos">
+          <input
+            type="text"
+            [value]="fila.texto"
+            [attr.aria-label]="'Cita ' + ($index + 1)"
+            placeholder="«Pierdo dos horas al día con esto»"
+            (input)="cambiarTexto($index, $any($event.target).value)"
+          />
+          <input
+            type="text"
+            [value]="fila.contexto"
+            [attr.aria-label]="'Contexto de la cita ' + ($index + 1)"
+            placeholder="Contexto (opcional)"
+            (input)="cambiarContexto($index, $any($event.target).value)"
+          />
+        </span>
+
+        <button
+          type="button"
+          class="quitar-cita"
+          [attr.aria-label]="'Quitar la cita ' + ($index + 1)"
+          (click)="quitar($index)"
+        >
+          ×
+        </button>
+      </li>
+    }
+  </ul>
+
+  <button type="button" class="boton-secundario anadir-cita" (click)="anadir()">Añadir cita</button>
+</fieldset>

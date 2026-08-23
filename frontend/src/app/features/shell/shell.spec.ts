@@ -75,6 +75,7 @@ function setupNavegacion(): ComponentFixture<Shell> {
       provideRouter([
         { path: 'ideas', component: Vacio },
         { path: 'ideas/:id/contactos', component: Vacio },
+        { path: 'ideas/:id/entrevistas', component: Vacio },
         { path: 'guiones', component: Vacio },
       ]),
       { provide: SesionService, useValue: { usuario: signal<Usuario | null>(usuario) } },
@@ -117,6 +118,14 @@ describe('Shell — navegación entre dominios', () => {
     await irA(fixture, '/ideas/i1/contactos');
 
     // Con `exact: true` el resaltado se apagaría al entrar en cualquier detalle.
+    expect(enlaceDominio(fixture, 'Ideas').classList).toContain('activo');
+    expect(enlaceDominio(fixture, 'Guiones').classList).not.toContain('activo');
+  });
+
+  it('el resaltado de Ideas sobrevive a las entrevistas de una idea', async () => {
+    const fixture = setupNavegacion();
+    await irA(fixture, '/ideas/i1/entrevistas');
+
     expect(enlaceDominio(fixture, 'Ideas').classList).toContain('activo');
     expect(enlaceDominio(fixture, 'Guiones').classList).not.toContain('activo');
   });
