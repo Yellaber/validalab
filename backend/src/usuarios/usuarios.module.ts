@@ -17,5 +17,8 @@ import { UsuariosService } from './usuario/usuarios.service';
   imports: [TypeOrmModule.forFeature([Usuario, Sesion]), AuthModule],
   controllers: [UsuariosController],
   providers: [UsuariosService, ServicioDeHashing, ServicioDeTokens],
+  // `sistema` reutiliza el alta de cuentas para crear el administrador de origen
+  // en lugar de duplicar hashing e invariantes.
+  exports: [UsuariosService],
 })
 export class UsuariosModule {}

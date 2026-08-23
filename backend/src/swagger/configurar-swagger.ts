@@ -27,9 +27,27 @@ export function configurarSwagger(app: INestApplication): void {
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'bearerAuth',
     )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-Bootstrap-Token',
+        description:
+          'Secreto de despliegue que autoriza `POST /sistema/inicializar`, la ' +
+          'única operación que lo acepta. Solo sirve mientras el sistema no esté ' +
+          'inicializado; después puede retirarse del entorno. No sustituye ni es ' +
+          'sustituido por `bearerAuth`.',
+      },
+      'bootstrapToken',
+    )
     .addTag(
       'usuarios',
       'Autenticación, sesión y perfil propio del usuario (épica E0).',
+    )
+    .addTag(
+      'sistema',
+      'Ciclo de vida de la instalación, no del dominio: operaciones que se ' +
+        'ejecutan al poner en marcha un sistema y no forman parte del uso diario.',
     )
     .build();
 

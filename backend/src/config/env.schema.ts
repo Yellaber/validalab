@@ -48,6 +48,21 @@ export const envSchema = z.object({
   // de refresh) el origen NO puede ser `*`: debe listarse explícitamente.
   CORS_ORIGINS: z.string().min(1).default('http://localhost:4200'),
 
+  // --- Inicialización del sistema ---
+  // Secreto que autoriza `POST /sistema/inicializar` (cabecera `X-Bootstrap-Token`),
+  // la única operación que lo acepta. Es OPCIONAL a propósito: un sistema que ya
+  // fue inicializado no lo necesita, y exigirlo rompería el arranque de todo
+  // despliegue en marcha. Si no está configurado, el guard rechaza TODA petición
+  // de inicialización (el fallo por defecto es denegar). El mínimo de 32
+  // caracteres evita que un secreto trivial pase inadvertido.
+  // Un valor vacío (`BOOTSTRAP_TOKEN=` en el .env) se trata como «sin configurar»:
+  // es lo que el operador quiere decir, y evita que copiar la plantilla aborte el
+  // arranque por un `.min(32)` sobre la cadena vacía.
+  BOOTSTRAP_TOKEN: z.preprocess(
+    (valor) => (valor === '' ? undefined : valor),
+    z.string().min(32).optional(),
+  ),
+
   // --- BYOK (configuración del proveedor de IA por usuario) ---
   // Clave AES-256 (32 bytes = 64 hex) para cifrar en reposo las API keys BYOK.
   BYOK_CLAVE_CIFRADO: z

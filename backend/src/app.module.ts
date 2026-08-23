@@ -11,6 +11,7 @@ import { EntrevistasModule } from './entrevistas/entrevistas.module';
 import { ProveedoresModule } from './proveedores/proveedores.module';
 import { AgenteModule } from './agente/agente.module';
 import { KpisModule } from './kpis/kpis.module';
+import { SistemaModule } from './sistema/sistema.module';
 import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
 
 @Module({
@@ -25,6 +26,7 @@ import { FiltroDeExcepciones } from './common/errors/filtro-excepciones';
     ProveedoresModule,
     AgenteModule,
     KpisModule,
+    SistemaModule,
   ],
   controllers: [],
   providers: [

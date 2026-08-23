@@ -74,6 +74,15 @@ export class AppConfigService {
       .filter((o) => o.length > 0);
   }
 
+  /**
+   * Secreto que autoriza la inicialización del sistema. `undefined` cuando no
+   * está configurado, en cuyo caso la inicialización no puede autorizarse y el
+   * guard rechaza toda petición.
+   */
+  get bootstrap(): { token?: string } {
+    return { token: this.config.get('BOOTSTRAP_TOKEN', { infer: true }) };
+  }
+
   /** Configuración BYOK: clave de cifrado de las API keys y flag de validación. */
   get byok(): { claveCifrado: string; validarKey: boolean } {
     return {

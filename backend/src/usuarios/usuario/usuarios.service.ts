@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { EntityManager, QueryFailedError, Repository } from 'typeorm';
 import {
   ConflictoException,
   NoAutenticadoException,
@@ -44,22 +44,60 @@ export class UsuariosService {
    * → `ConflictoException` (incluida la carrera, vía la restricción única).
    */
   async registrar(datos: RegistroUsuarioDto): Promise<UsuarioRespuesta> {
+    return this.crearCuenta(datos, 'validador');
+  }
+
+  /**
+   * Crea la cuenta administradora de origen del sistema. La invoca EXCLUSIVAMENTE
+   * la inicialización (`POST /sistema/inicializar`), que es el único origen del
+   * rol `administrador` en el contrato.
+   *
+   * Existe como método propio, y no como un parámetro `rol` de `registrar`, a
+   * propósito: parametrizar el rol lo pondría en el camino que sirve al endpoint
+   * PÚBLICO de registro, donde un error de cableado bastaría para que cualquiera
+   * pudiera crear administradores. Con esta firma, el camino público queda
+   * incapaz de producir uno.
+   *
+   * Acepta el `EntityManager` de la transacción que abre la inicialización, para
+   * que el alta y la reserva del marcador se confirmen o se reviertan juntas.
+   */
+  async crearAdministradorInicial(
+    datos: RegistroUsuarioDto,
+    manager?: EntityManager,
+  ): Promise<UsuarioRespuesta> {
+    return this.crearCuenta(datos, 'administrador', manager);
+  }
+
+  /**
+   * Alta de cuenta compartida: normaliza el email, hashea la contraseña y
+   * garantiza unicidad del email. Email duplicado → `ConflictoException`
+   * (incluida la carrera, vía la restricción única). El rol lo fija el llamante;
+   * ningún camino público pasa aquí un valor distinto de `validador`.
+   */
+  private async crearCuenta(
+    datos: RegistroUsuarioDto,
+    rol: Rol,
+    manager?: EntityManager,
+  ): Promise<UsuarioRespuesta> {
+    const repositorio = manager
+      ? manager.getRepository(Usuario)
+      : this.usuarios;
     const email = this.normalizarEmail(datos.email);
 
-    if (await this.usuarios.findOne({ where: { email } })) {
+    if (await repositorio.findOne({ where: { email } })) {
       throw new ConflictoException('Ya existe una cuenta con ese email.');
     }
 
-    const usuario = this.usuarios.create({
+    const usuario = repositorio.create({
       email,
       nombre: datos.nombre,
       passwordHash: await this.hashing.hash(datos.password),
-      rol: 'validador',
+      rol,
       estado: 'activo',
     });
 
     try {
-      const guardado = await this.usuarios.save(usuario);
+      const guardado = await repositorio.save(usuario);
       return aUsuarioDto(guardado);
     } catch (error) {
       if (this.esViolacionUnica(error)) {

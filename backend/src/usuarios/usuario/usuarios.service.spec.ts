@@ -1,4 +1,4 @@
-import { QueryFailedError, Repository } from 'typeorm';
+import { EntityManager, QueryFailedError, Repository } from 'typeorm';
 import {
   ConflictoException,
   NoAutenticadoException,
@@ -146,6 +146,79 @@ describe('UsuariosService.registrar', () => {
     await expect(servicio.registrar(datosValidos)).rejects.toBeInstanceOf(
       ConflictoException,
     );
+  });
+});
+
+describe('UsuariosService.crearAdministradorInicial', () => {
+  it('crea la cuenta con rol administrador y estado activo', async () => {
+    const { servicio, repo, hashing } = crear();
+
+    const dto = await servicio.crearAdministradorInicial(datosValidos);
+
+    expect(hashing.hash).toHaveBeenCalledWith('contrasena-larga');
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ rol: 'administrador', estado: 'activo' }),
+    );
+    expect(dto.rol).toBe('administrador');
+    expect(dto.estado).toBe('activo');
+    expect(dto).not.toHaveProperty('passwordHash');
+  });
+
+  it('comparte con el registro la normalización del email', async () => {
+    const { servicio, repo } = crear();
+
+    await servicio.crearAdministradorInicial({
+      ...datosValidos,
+      email: '  ADMIN@Ejemplo.COM  ',
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'admin@ejemplo.com' }),
+    );
+  });
+
+  it('rechaza un email ya registrado con CONFLICTO', async () => {
+    const { servicio, repo } = crear();
+    repo.findOne.mockResolvedValue(usuarioActivo());
+
+    await expect(
+      servicio.crearAdministradorInicial(datosValidos),
+    ).rejects.toBeInstanceOf(ConflictoException);
+  });
+
+  it('usa el repositorio de la transacción cuando se le pasa un EntityManager', async () => {
+    const { servicio, repo } = crear();
+    const repoTransaccional: RepoMock = {
+      findOne: jest.fn().mockResolvedValue(null),
+      findAndCount: jest.fn(),
+      create: jest.fn((x: Partial<Usuario>) => x),
+      save: jest.fn((x: Usuario) =>
+        Promise.resolve({
+          ...x,
+          id: 'admin-1',
+          fechaCreacion: new Date('2026-01-01T00:00:00.000Z'),
+        }),
+      ),
+    };
+    const manager = {
+      getRepository: jest.fn().mockReturnValue(repoTransaccional),
+    } as unknown as EntityManager;
+
+    const dto = await servicio.crearAdministradorInicial(datosValidos, manager);
+
+    // El alta debe ocurrir dentro de la transacción, no fuera de ella: de lo
+    // contrario un rollback del marcador dejaría la cuenta creada.
+    expect(repoTransaccional.save).toHaveBeenCalled();
+    expect(repo.save).not.toHaveBeenCalled();
+    expect(dto.rol).toBe('administrador');
+  });
+
+  it('no expone el rol como parámetro del camino público de registro', () => {
+    const { servicio } = crear();
+
+    // `registrar` recibe un único argumento: el rol no es parametrizable desde
+    // el endpoint público, así que este no puede producir un administrador.
+    expect(servicio.registrar.bind(servicio)).toHaveLength(1);
   });
 });
 
