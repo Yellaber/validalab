@@ -59,4 +59,31 @@ describe('validateEnv', () => {
       validateEnv({ ...entornoValido, NODE_ENV: 'staging' }),
     ).toThrow(/NODE_ENV/);
   });
+
+  describe('BOOTSTRAP_TOKEN', () => {
+    it('arranca sin la variable: un sistema ya inicializado no la necesita', () => {
+      const env = validateEnv(entornoValido);
+
+      expect(env.BOOTSTRAP_TOKEN).toBeUndefined();
+    });
+
+    it('trata la cadena vacía como «sin configurar» en vez de abortar', () => {
+      const env = validateEnv({ ...entornoValido, BOOTSTRAP_TOKEN: '' });
+
+      expect(env.BOOTSTRAP_TOKEN).toBeUndefined();
+    });
+
+    it('acepta un secreto de al menos 32 caracteres', () => {
+      const secreto = 'b'.repeat(64);
+      const env = validateEnv({ ...entornoValido, BOOTSTRAP_TOKEN: secreto });
+
+      expect(env.BOOTSTRAP_TOKEN).toBe(secreto);
+    });
+
+    it('rechaza un secreto demasiado corto para que no pase inadvertido', () => {
+      expect(() =>
+        validateEnv({ ...entornoValido, BOOTSTRAP_TOKEN: 'corto' }),
+      ).toThrow(/BOOTSTRAP_TOKEN/);
+    });
+  });
 });

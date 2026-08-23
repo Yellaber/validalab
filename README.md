@@ -86,7 +86,7 @@ ejecutan por separado.
 ### Requisitos previos
 
 - **Node.js 24.x** y **npm** (el CI fija Node 24).
-- **PostgreSQL** (cuando el backend incorpore la capa de persistencia).
+- **PostgreSQL** — `backend/docker-compose.yml` levanta una instancia lista para desarrollo.
 - Una **API key** de un proveedor de IA (Anthropic / OpenAI / Google) para usar el Validador
   Inteligente — se configura por usuario vía BYOK.
 
@@ -111,6 +111,42 @@ npm run lint         # eslint --fix
 npm test             # tests unitarios (Jest)
 npm run test:e2e     # tests end-to-end
 ```
+
+### Arranque de un sistema nuevo
+
+Un despliegue recién creado **no está operativo hasta que se inicializa**. Dos de estos pasos
+no son deducibles del código, así que conviene seguirlos en orden:
+
+```bash
+cd backend
+cp .env.example .env          # rellena los secretos; el arranque es fail-fast
+docker compose up -d          # PostgreSQL en :5432
+npm ci
+npm run migration:run         # imprescindible: migrationsRun es false
+npm run start:dev             # :3000, docs vivas en /docs
+```
+
+Con el backend en marcha, **inicializa el sistema** para crear su cuenta administradora. Es la
+única operación que produce el rol `administrador`: el registro normal siempre crea `validador`.
+
+```bash
+curl -X POST http://localhost:3000/sistema/inicializar \
+  -H "Content-Type: application/json" \
+  -H "X-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
+  -d '{"email":"admin@ejemplo.com","nombre":"Admin","password":"tu-contrasena"}'
+```
+
+El secreto es el `BOOTSTRAP_TOKEN` de tu `.env` (genéralo con `openssl rand -hex 32`). Después,
+inicia sesión con `POST /usuarios/login` como cualquier otra cuenta.
+
+> [!IMPORTANT]
+> La inicialización es **de un solo uso y no tiene reversa**: cualquier llamada posterior
+> responde `409`, aunque presentes el secreto correcto. Si pierdes el acceso a la única cuenta
+> administradora, no hay recuperación por API. Promueve a un **segundo administrador** con
+> `PATCH /usuarios/{id}/rol` nada más entrar.
+
+Una vez inicializado el sistema, `BOOTSTRAP_TOKEN` ya no sirve para nada y puedes retirarlo del
+entorno.
 
 ---
 
