@@ -2,14 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Estado actual del repositorio
+## Cómo está organizado el repositorio
 
-**El monorepo ya está inicializado** como repositorio Git propio en `validalab/`, con dos paquetes andamiados pero aún sin código de dominio:
+Monorepo Git en `validalab/` con dos paquetes **independientes** —cada uno con su `package.json`, su `package-lock.json` y su `CLAUDE.md`; no hay workspace manager en la raíz:
 
-- `frontend/` — scaffold de Angular 22 (standalone, detección de cambios *zoneless*). Ver `frontend/CLAUDE.md` para comandos y arquitectura del frontend.
-- `backend/` — scaffold de NestJS 11 (aún el `AppController`/`AppService` por defecto).
+- `frontend/` — aplicación Angular 22 (standalone, detección de cambios *zoneless*). Ver `frontend/CLAUDE.md` para comandos y arquitectura.
+- `backend/` — API NestJS 11, modular por dominio. Ver `backend/CLAUDE.md`.
 
 Ambos paquetes, y la raíz, usan **OpenSpec** (desarrollo guiado por especificación): hay `openspec/` con `config.yaml`, `specs/` y `changes/`. Las funcionalidades sustanciales pasan por el ciclo propose → apply → verify → archive (skills `opsx:*` / `openspec-*`).
+
+> **Dónde está el alcance implementado.** Este archivo describe **cómo** construir —dominio, arquitectura, convenciones y reglas—, no qué hay construido. Para saber qué funcionalidades existen hoy, consulta las capacidades vigentes en `openspec/specs/` (raíz y de cada paquete) y el código; para el histórico de versiones, el `CHANGELOG.md`. Esa separación es deliberada: una guía que enumera lo construido queda obsoleta en el siguiente cambio.
 
 La fuente de verdad funcional sigue siendo la especificación de requerimientos (SRS), en la carpeta hermana:
 

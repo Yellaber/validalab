@@ -1,59 +1,45 @@
-# Frontend
+# ValidaLab — frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.5.
+Cliente **Angular 22** del SaaS multi-tenant: standalone (sin NgModules), detección de cambios
+*zoneless* y estado dirigido por signals. Habla con el backend NestJS a través del contrato de API.
 
-## Development server
+El agente, las API keys BYOK y el cálculo de KPIs viven del lado del servidor: este paquete nunca
+ve una API key en crudo ni ejecuta el agente.
 
-To start a local development server, run:
+## Requisitos
 
-```bash
-ng serve
-```
+- Node.js 24.x y npm.
+- El backend en marcha para trabajar contra datos reales. En desarrollo se apunta a
+  `http://localhost:3000` (ver `src/environments/`).
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Comandos
 
 ```bash
-ng generate component component-name
+npm start            # ng serve — http://localhost:4200
+npm run build        # build de producción a dist/
+npm run watch        # build incremental en modo desarrollo
+npm test             # Vitest sobre jsdom; en terminal interactiva arranca en modo watch
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Ejecutar una parte de la suite:
 
 ```bash
-ng generate --help
+npm test -- --no-watch                      # una sola pasada (modo CI)
+npm test -- --include=src/app/app.spec.ts   # un único archivo
+npm test -- --filter='^App'                 # por patrón de nombre
+npm test -- --coverage                      # con cobertura
 ```
 
-## Building
+Este paquete no tiene ESLint ni framework e2e propios: el linting del monorepo vive en `backend/`,
+y la cobertura extremo a extremo del sistema, en `backend/test/`. El formato lo aplica Prettier,
+configurado en línea en `package.json`.
 
-To build the project run:
+## Dónde seguir
 
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- [`../README.md`](../README.md) — producto, dominio, stack y flujo de ramas y PRs.
+- [`CLAUDE.md`](CLAUDE.md) — arquitectura del paquete, convenciones y las skills de Angular que
+  son la fuente de las prácticas vigentes.
+- [`../contrato-api/openapi.yaml`](../contrato-api/openapi.yaml) — el contrato, fuente de verdad
+  de la interfaz con el backend. Construye cada llamada HTTP contra él, sin inspeccionar el código
+  del backend.
+- `openspec/specs/` — capacidades vigentes de este paquete.

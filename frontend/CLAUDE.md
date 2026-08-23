@@ -36,13 +36,13 @@ npm test -- --no-watch                      # ejecuta una vez y sale (modo CI)
 npm test -- --coverage                      # genera reporte de cobertura
 ```
 
-O enfoca en el código con `describe.only` / `it.only` de Vitest (y `.skip` para excluir; recuerda revertirlo antes de hacer commit). El entorno es **jsdom** y los globals (`describe`, `it`, `expect`) los habilita el builder, así que no hace falta importarlos. Los tests son *zoneless*: usa el patrón **Act–Wait–Assert** con `await fixture.whenStable()` en lugar de `fixture.detectChanges()` (ver la skill `angular-developer` → testing). Aún no hay framework e2e configurado.
+O enfoca en el código con `describe.only` / `it.only` de Vitest (y `.skip` para excluir; recuerda revertirlo antes de hacer commit). El entorno es **jsdom** y los globals (`describe`, `it`, `expect`) los habilita el builder, así que no hace falta importarlos. Los tests son *zoneless*: usa el patrón **Act–Wait–Assert** con `await fixture.whenStable()` en lugar de `fixture.detectChanges()` (ver la skill `angular-developer` → testing). Este paquete no tiene framework e2e configurado; la cobertura extremo a extremo del sistema vive en `backend/test/`.
 
 Este paquete no tiene script `lint` ni configuración de ESLint — solo Prettier (configurado en línea en `package.json`: 100 columnas, comillas simples, parser HTML de Angular). El paquete `backend/` es donde vive `npm run lint`.
 
 ## Arquitectura
 
-- **Angular 22, bootstrap standalone.** Sin NgModules. La entrada es `src/main.ts` → `src/app/app.ts`, configurada por `src/app/app.config.ts`. Las rutas viven en `src/app/app.routes.ts` (actualmente vacío — las rutas de funcionalidad se añaden aquí, con carga diferida).
+- **Angular 22, bootstrap standalone.** Sin NgModules. La entrada es `src/main.ts` → `src/app/app.ts`, configurada por `src/app/app.config.ts`. Las rutas viven en `src/app/app.routes.ts`: las de funcionalidad se declaran ahí con **carga diferida** (`loadComponent` / `loadChildren`), de modo que cada feature entre en su propio chunk.
 - **Detección de cambios *zoneless*.** `app.config.ts` usa `provideZonelessChangeDetection()`, así que no hay Zone.js. La detección de cambios se dirige por signals — el estado del componente que la plantilla lee **debe** ser un signal (o actualizarse con actualizaciones de signal equivalentes a `markForCheck`), de lo contrario la vista no se actualizará. Esto hace que el enfoque *signals-first* sea obligatorio, no estilístico. El trabajo asíncrono que deba refrescar la UI tiene que fluir a través de signals.
 - Los listeners globales de error se habilitan vía `provideBrowserGlobalErrorListeners()`.
 - **Organización de archivos por feature.** Estructura `src/app/` **por feature/dominio** (una carpeta por contexto: `ideas/`, `usuarios/`, …), no por tipo técnico a nivel global. Cuando una feature crece, agrupa sus archivos en **subcarpetas** en vez de dejarlos planos, con el mismo criterio que el backend:
@@ -50,7 +50,7 @@ Este paquete no tiene script `lint` ni configuración de ESLint — solo Prettie
   - **Código transversal/compartido** (guards, interceptors, modelos del contrato de API, utilidades) → agrupado **por tipo** en `core/` / `shared/`.
   Las mecánicas concretas de Angular (bootstrap standalone, sufijos de archivo, carga diferida de rutas) las gobierna la skill **`angular-developer`** — consúltala; esta convención solo fija el **eje de organización**, coherente con `backend/`.
 
-Este es un andamiaje recién creado del CLI de Angular: el único código de app es el componente raíz `App`. Aún no hay capa HTTP, autenticación, librería de estado ni UI de dominio. Al construir funcionalidades, sigue el orden de épicos del SRS según el documento raíz (cuentas/aislamiento → ideas → hipótesis/umbrales → CRM de contactos → entrevistas + scoring por IA → KPIs/tablero → veredicto → config BYOK) y mantén los identificadores de dominio en **español** para coincidir con el SRS (`idea`, `hipótesis`, `entrevista`, `veredicto`, `umbral`, `score`).
+El orden de prioridad del SRS para el camino crítico es: cuentas/aislamiento → ideas → hipótesis/umbrales → CRM de contactos → entrevistas + scoring por IA → KPIs/tablero → veredicto → config BYOK → costo/optimización. Qué capacidades existen ya está en `openspec/specs/`, no aquí. Mantén los identificadores de dominio en **español** para coincidir con el SRS (`idea`, `hipótesis`, `entrevista`, `veredicto`, `umbral`, `score`).
 
 El frontend es un cliente SaaS multi-tenant que habla con el backend NestJS; el agente (Validador Inteligente), el manejo de las API keys BYOK y el cálculo de KPIs viven todos del lado del servidor — el frontend nunca ve las API keys en crudo ni ejecuta el agente.
 
