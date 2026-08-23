@@ -1,0 +1,97 @@
+<div class="cabecera">
+  <h1>Alertas</h1>
+  <div class="acciones-fila">
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'tablero']">Tablero</a>
+  </div>
+</div>
+
+<p class="intro">
+  Cada vez que un KPI cruza un umbral, el sistema lo registra aquí. Es para enterarte sin tener que
+  estar mirando el tablero.
+</p>
+
+<div class="filtros">
+  <label for="filtro-leida">Mostrar</label>
+  <select id="filtro-leida" (change)="cambiarFiltro($any($event.target).value)">
+    <option value="">Todas</option>
+    <option value="false">Sin leer</option>
+    <option value="true">Leídas</option>
+  </select>
+</div>
+
+@if (errorAccion(); as msg) {
+  <p class="error-general" role="alert">{{ msg }}</p>
+}
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando las alertas…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else {
+      <p>No se pudieron cargar las alertas. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+  </div>
+} @else if (vacio()) {
+  <div class="vacio">
+    <p>No hay alertas para esta idea. Ningún KPI ha cruzado sus umbrales todavía.</p>
+  </div>
+} @else {
+  <ul class="lista">
+    @for (fila of filas(); track fila.alerta.id) {
+      <li class="alerta tipo-{{ fila.alerta.tipo }}" [class.leida]="fila.alerta.leida">
+        <div>
+          <h3>{{ fila.nombre }}</h3>
+          <p class="cruce">
+            @if (fila.alerta.tipo === 'kill') {
+              Cayó a {{ fila.valor }}, por debajo del umbral kill de {{ fila.umbral }}.
+            } @else {
+              Subió a {{ fila.valor }}, alcanzando el umbral go de {{ fila.umbral }}.
+            }
+          </p>
+          <span class="fecha">{{ fila.alerta.fecha.slice(0, 10) }}</span>
+        </div>
+
+        @if (!fila.alerta.leida) {
+          <button
+            type="button"
+            class="boton-secundario"
+            [disabled]="marcando() === fila.alerta.id"
+            (click)="marcarLeida(fila.alerta.id)"
+          >
+            {{ marcando() === fila.alerta.id ? 'Marcando…' : 'Marcar leída' }}
+          </button>
+        }
+      </li>
+    }
+  </ul>
+
+  @if (paginacion(); as pag) {
+    <nav class="paginacion" aria-label="Paginación de alertas">
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina <= 1"
+        (click)="paginaAnterior()"
+      >
+        Anterior
+      </button>
+      <span>Página {{ pag.pagina }} de {{ pag.totalPaginas }}</span>
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina >= pag.totalPaginas"
+        (click)="paginaSiguiente()"
+      >
+        Siguiente
+      </button>
+    </nav>
+  }
+}

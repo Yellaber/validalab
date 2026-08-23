@@ -1,0 +1,112 @@
+<div class="cabecera">
+  <h1>Umbrales kill/go</h1>
+  <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+</div>
+
+<p class="intro">
+  Fija el listón de cada KPI para esta idea: la zona GO empieza en el valor
+  <strong>go</strong> y la zona KILL por debajo del valor <strong>kill</strong>. Los umbrales no
+  deciden nada por sí solos: son el criterio que el agente pondera al emitir un veredicto.
+</p>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando los umbrales…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else {
+      <p>No se pudieron cargar los umbrales. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+  </div>
+} @else if (vacio()) {
+  <div class="vacio">
+    <p>No hay umbrales configurables para esta idea.</p>
+  </div>
+} @else {
+  @for (grupo of grupos(); track grupo.grupo) {
+    <section class="grupo-kpi">
+      <h2>{{ grupo.nombre }}</h2>
+      @if (grupo.contexto) {
+        <p class="contexto">{{ grupo.contexto }}</p>
+      }
+
+      @for (v of grupo.filas; track v.fila.umbral.kpi) {
+        <div class="fila-umbral">
+          <div class="nombre-kpi">
+            {{ v.nombre }}
+            @if (v.formula) {
+              <small>{{ v.formula }}</small>
+            }
+          </div>
+
+          <label class="campo-umbral">
+            <span>Umbral go</span>
+            <span class="entrada">
+              <input
+                type="number"
+                [attr.aria-label]="'Umbral go de ' + v.nombre"
+                [value]="v.fila.textoGo"
+                [step]="v.formato.paso"
+                [min]="v.formato.minimo"
+                (input)="editarGo(v.fila.umbral.kpi, $any($event.target).value)"
+              />
+              @if (v.formato.sufijo) {
+                <span class="sufijo">{{ v.formato.sufijo }}</span>
+              }
+            </span>
+            @if (v.errorGo; as msg) {
+              <small class="campo-error">{{ msg }}</small>
+            }
+          </label>
+
+          @if (v.tieneKill) {
+            <label class="campo-umbral">
+              <span>Umbral kill</span>
+              <span class="entrada">
+                <input
+                  type="number"
+                  [attr.aria-label]="'Umbral kill de ' + v.nombre"
+                  [value]="v.fila.textoKill"
+                  [step]="v.formato.paso"
+                  [min]="v.formato.minimo"
+                  (input)="editarKill(v.fila.umbral.kpi, $any($event.target).value)"
+                />
+                @if (v.formato.sufijo) {
+                  <span class="sufijo">{{ v.formato.sufijo }}</span>
+                }
+              </span>
+              @if (v.errorKill; as msg) {
+                <small class="campo-error">{{ msg }}</small>
+              }
+            </label>
+          } @else {
+            <span class="sin-kill">Sin zona kill</span>
+          }
+
+          @if (v.fila.guardado) {
+            <span class="estado-guardado" role="status">Guardado</span>
+          } @else {
+            <button
+              type="button"
+              class="boton-secundario"
+              [disabled]="!v.puedeGuardar"
+              (click)="guardar(v)"
+            >
+              {{ v.fila.guardando ? 'Guardando…' : 'Guardar' }}
+            </button>
+          }
+
+          @if (v.fila.error; as msg) {
+            <p class="fila-error" role="alert">{{ msg }}</p>
+          }
+        </div>
+      }
+    </section>
+  }
+}

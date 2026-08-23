@@ -31,8 +31,8 @@ Principio de diseño central — **la tríada de responsabilidades**:
 ## Stack tecnológico previsto (RNF-03)
 
 - **Frontend:** Angular
-- **Backend:** NestJS sobre Node.js — arquitectura modular por dominio (RNF-10): `usuarios`, `ideas`, `contactos`, `entrevistas`, `kpis`, `agente`, `proveedores`
-- **Persistencia:** PostgreSQL
+- **Backend:** NestJS sobre Node.js — arquitectura modular por dominio (RNF-10): `usuarios`, `ideas`, `contactos`, `entrevistas`, `kpis`, `agente`, `proveedores`. **Validación con Zod (`nestjs-zod`)** en los DTOs HTTP, unificando una sola gramática de esquemas con la capa agéntica (que ya exige Zod)
+- **Persistencia:** PostgreSQL con **TypeORM** (entidades y repositorios por decoradores, alineado con la DI de Nest; el esquema se gobierna con migraciones, nunca con `synchronize` en entornos reales)
 - **Capa agéntica:** LangGraph.js + `@langchain/core`, TypeScript, esquemas **Zod** para tools y salida estructurada
 
 El proyecto es **multi-tenant desde la primera versión**: autenticación, RBAC y aislamiento por `owner_id` filtrado en cada consulta. Ningún usuario ve datos de otro.

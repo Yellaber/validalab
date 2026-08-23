@@ -1,0 +1,59 @@
+<div class="cabecera">
+  <h1>Editar entrevista</h1>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando la entrevista…</p>
+} @else {
+  <form (submit)="onSubmit(); $event.preventDefault()">
+    @if (errorGeneral(); as error) {
+      <p class="error-general" role="alert">{{ error }}</p>
+    }
+
+    <!--
+      Sin selectores de contacto ni de guión: el contrato no permite cambiarlos, así
+      que el guión se muestra como dato, no como campo.
+    -->
+    <p class="intro">
+      Guión usado: <strong>{{ nombreGuion() }}</strong>
+    </p>
+
+    <fieldset class="citas">
+      <legend>Respuestas</legend>
+      <ul class="preguntas-respuesta">
+        @for (fila of respuestas(); track fila.pregunta.id) {
+          <li class="pregunta-respuesta">
+            <label>
+              <span class="enunciado">
+                <span class="indice">{{ $index + 1 }}.</span> {{ fila.pregunta.texto }}
+              </span>
+              <textarea
+                rows="2"
+                [value]="fila.texto"
+                (input)="cambiarRespuesta(fila.pregunta.id, $any($event.target).value)"
+              ></textarea>
+            </label>
+          </li>
+        }
+      </ul>
+    </fieldset>
+
+    @if (hayRespuestasCambiadas()) {
+      <p class="aviso-scoring" role="status">
+        Has modificado alguna respuesta. Al guardar se descartará el score que el agente ya emitió y
+        la entrevista volverá a puntuarse.
+      </p>
+    }
+
+    <app-editor-citas [(filas)]="citas" />
+
+    <div class="acciones">
+      <button type="submit" class="boton-primario" [disabled]="!puedeGuardar()">
+        {{ enviando() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+      <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas', id]">
+        Cancelar
+      </a>
+    </div>
+  </form>
+}

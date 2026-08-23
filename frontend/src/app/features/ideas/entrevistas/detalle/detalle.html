@@ -1,0 +1,185 @@
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando la entrevista…</p>
+} @else if (error(); as err) {
+  <!-- El aviso va EN LUGAR del contenido: una entrevista ajena no revela nada. -->
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta entrevista.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta entrevista no existe.</p>
+    } @else {
+      <p>No se pudo cargar la entrevista. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas']">
+      Volver a las entrevistas
+    </a>
+  </div>
+} @else if (entrevista(); as e) {
+  <div class="cabecera">
+    <h1>{{ nombreContacto() }}</h1>
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas']">Volver</a>
+  </div>
+
+  <span class="estado estado-{{ e.estadoScoring }}">{{ etiquetaEstado[e.estadoScoring] }}</span>
+
+  <section class="detalle">
+    <dl>
+      <dt>Guión</dt>
+      <dd>{{ nombreGuion() }}</dd>
+
+      <dt>Fecha</dt>
+      <dd>{{ e.fechaCreacion.slice(0, 10) }}</dd>
+
+      <dt>Respuestas</dt>
+      <dd>
+        <ul class="respuestas-detalle">
+          @for (r of respuestas(); track $index) {
+            <li>
+              <span class="enunciado">{{ r.enunciado }}</span>
+              <span class="texto">{{ r.texto }}</span>
+            </li>
+          }
+        </ul>
+      </dd>
+
+      @if (e.citas.length) {
+        <dt>Citas</dt>
+        <dd>
+          <ul class="citas-detalle">
+            @for (cita of e.citas; track cita.id) {
+              <li>
+                «{{ cita.texto }}»
+                @if (cita.contexto) {
+                  <span class="contexto"> — {{ cita.contexto }}</span>
+                }
+              </li>
+            }
+          </ul>
+        </dd>
+      }
+    </dl>
+  </section>
+
+  @if (errorAccion(); as msg) {
+    <p class="error-general" role="alert">{{ msg }}</p>
+  }
+
+  <!-- El juicio del agente. El bloque solo existe si hay score. -->
+  @if (score(); as s) {
+    <app-score-entrevista [score]="s" [ajuste]="ajuste()" />
+  } @else if (scoringFallido()) {
+    <p class="aviso-consumo-accion" role="status">
+      El agente no pudo puntuar esta entrevista. Puedes reintentarlo.
+    </p>
+  } @else if (scoringEnCurso()) {
+    @if (seguimiento.agotado()) {
+      <p class="aviso-consumo-accion" role="status">
+        El scoring está tardando más de lo normal. Sigue en marcha; puedes refrescar para ver si ya
+        terminó.
+        <button type="button" class="boton-secundario" (click)="refrescarManual()">
+          Refrescar
+        </button>
+      </p>
+    } @else {
+      <p class="cargando" role="status">El agente está puntuando esta entrevista…</p>
+    }
+  }
+
+  <div class="acciones-scoring">
+    <button type="button" class="boton-secundario" [disabled]="puntuando()" (click)="puntuar()">
+      @if (puntuando()) {
+        Enviando…
+      } @else if (scoringFallido()) {
+        Reintentar el scoring
+      } @else {
+        Volver a puntuar
+      }
+    </button>
+
+    @if (score() && !formularioAjusteAbierto()) {
+      <button type="button" class="boton-secundario" (click)="abrirAjuste()">
+        {{ ajuste() ? 'Cambiar mi ajuste' : 'Ajustar el score' }}
+      </button>
+    }
+  </div>
+
+  <p class="aviso-consumo-accion">
+    Puntuar consume del proveedor de IA que tengas configurado. Si la entrevista no ha cambiado, no
+    se vuelve a invocar al agente.
+  </p>
+
+  @if (formularioAjusteAbierto()) {
+    <form class="formulario-ajuste" (submit)="onSubmitAjuste(); $event.preventDefault()">
+      <label class="campo">
+        <span>Tu score (0–10)</span>
+        <input type="number" step="0.1" [formField]="formularioAjuste.scoreAjustado" />
+        @if (
+          formularioAjuste.scoreAjustado().touched() &&
+          formularioAjuste.scoreAjustado().errors().length
+        ) {
+          <small class="campo-error">
+            {{ formularioAjuste.scoreAjustado().errors()[0].message }}
+          </small>
+        } @else if (erroresAjuste()['scoreAjustado']; as msg) {
+          <small class="campo-error">{{ msg }}</small>
+        }
+      </label>
+
+      <label class="campo">
+        <span>Motivo del ajuste</span>
+        <textarea
+          rows="2"
+          placeholder="¿Por qué corriges el score del agente?"
+          [formField]="formularioAjuste.nota"
+        ></textarea>
+        @if (formularioAjuste.nota().touched() && formularioAjuste.nota().errors().length) {
+          <small class="campo-error">{{ formularioAjuste.nota().errors()[0].message }}</small>
+        } @else if (erroresAjuste()['nota']; as msg) {
+          <small class="campo-error">{{ msg }}</small>
+        }
+      </label>
+
+      <div class="acciones">
+        <button
+          type="submit"
+          class="boton-primario"
+          [disabled]="ajustando() || !formularioAjuste().valid()"
+        >
+          {{ ajustando() ? 'Guardando…' : 'Registrar ajuste' }}
+        </button>
+        <button type="button" class="boton-secundario" (click)="cerrarAjuste()">Cancelar</button>
+      </div>
+    </form>
+  }
+
+  <div class="acciones-fila acciones">
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas', e.id, 'editar']">
+      Editar
+    </a>
+
+    @if (confirmandoBorrado()) {
+      <span class="confirmacion" role="alert">
+        ¿Eliminar esta entrevista? El contacto volverá a poder entrevistarse.
+        <button
+          type="button"
+          class="boton-peligro"
+          [disabled]="borrando()"
+          (click)="confirmarBorrado()"
+        >
+          {{ borrando() ? 'Eliminando…' : 'Sí, eliminar' }}
+        </button>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="borrando()"
+          (click)="cancelarBorrado()"
+        >
+          Cancelar
+        </button>
+      </span>
+    } @else {
+      <button type="button" class="boton-peligro" (click)="pedirBorrado()">Eliminar</button>
+    }
+  </div>
+}

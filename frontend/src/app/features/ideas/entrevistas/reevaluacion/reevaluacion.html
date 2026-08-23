@@ -1,0 +1,86 @@
+<div class="cabecera">
+  <h1>Re-evaluar entrevistas en lote</h1>
+  <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas']">Volver</a>
+</div>
+
+<p class="contexto">
+  Tras cambiar la rúbrica de scoring, las entrevistas puntuadas con la versión anterior quedan
+  desactualizadas. Aquí puedes re-puntuarlas en lote. Es una acción explícita; las que no cambiaron
+  se omiten por idempotencia.
+</p>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Calculando la estimación…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+    } @else {
+      <p>No se pudo cargar la estimación. ({{ err.codigo }})</p>
+    }
+    <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+  </div>
+} @else if (estimacion(); as est) {
+  <section class="detalle">
+    <h2>Estimación (sin ejecutar)</h2>
+    <dl>
+      <dt>Entrevistas afectadas</dt>
+      <dd>{{ est.entrevistasAfectadas }}</dd>
+
+      <dt>Modelo de scoring</dt>
+      <dd>{{ est.modeloScoring ?? 'Sin proveedor configurado (BYOK)' }}</dd>
+
+      <dt>Costo estimado</dt>
+      <dd>{{ est.costoEstimado | currency: est.moneda : 'symbol' : '1.2-4' }}</dd>
+
+      <dt>Tokens estimados</dt>
+      <dd>{{ est.tokensEntradaEstimados }} entrada / {{ est.tokensSalidaEstimados }} salida</dd>
+    </dl>
+    <p class="aclaracion" role="note">{{ est.aclaracion }}</p>
+  </section>
+
+  @if (errorAccion(); as msg) {
+    <p class="error-general" role="alert">{{ msg }}</p>
+  }
+
+  @if (sinAfectadas()) {
+    <p class="vacio">No hay entrevistas por re-evaluar: todas están al día con la rúbrica vigente.</p>
+  } @else {
+    <div class="acciones">
+      <button
+        type="button"
+        class="boton-primario"
+        [disabled]="ejecutando() || sinByok()"
+        (click)="ejecutar()"
+      >
+        {{ ejecutando() ? 'Re-evaluando…' : 'Re-evaluar ' + est.entrevistasAfectadas + ' entrevista(s)' }}
+      </button>
+    </div>
+    @if (sinByok()) {
+      <p class="aviso" role="note">
+        Configura tu proveedor de IA (BYOK) para poder re-evaluar.
+      </p>
+    }
+  }
+
+  @if (resultado(); as res) {
+    <section class="detalle exito-bloque">
+      <h2>Resultado</h2>
+      <dl>
+        <dt>Re-puntuadas</dt>
+        <dd>{{ res.entrevistasReevaluadas }}</dd>
+
+        <dt>Omitidas (sin cambios)</dt>
+        <dd>{{ res.entrevistasOmitidas }}</dd>
+
+        <dt>Costo del lote</dt>
+        <dd>{{ res.costoEstimado | currency: res.moneda : 'symbol' : '1.2-4' }}</dd>
+
+        <dt>Tokens</dt>
+        <dd>{{ res.tokensEntrada }} entrada / {{ res.tokensSalida }} salida</dd>
+      </dl>
+    </section>
+  }
+}

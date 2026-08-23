@@ -1,0 +1,75 @@
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando la idea…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+    } @else {
+      <p>No se pudo cargar la idea. ({{ err.codigo }})</p>
+    }
+    <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+  </div>
+} @else if (idea(); as i) {
+  <div class="cabecera">
+    <h1>{{ i.titulo }}</h1>
+    <a class="boton-secundario" routerLink="/ideas">Volver</a>
+  </div>
+
+  <span class="estado">{{ etiqueta[i.estado] }}</span>
+
+  <section class="detalle">
+    <dl>
+      <dt>Problema</dt>
+      <dd>{{ i.problema }}</dd>
+
+      @if (i.descripcion) {
+        <dt>Descripción</dt>
+        <dd>{{ i.descripcion }}</dd>
+      }
+
+      @if (i.segmentoBeachhead) {
+        <dt>Segmento beachhead</dt>
+        <dd>{{ i.segmentoBeachhead }}</dd>
+      }
+    </dl>
+  </section>
+
+  <nav class="accesos" aria-label="Criterio de validación de la idea">
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'hipotesis']">Hipótesis</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'umbrales']">Umbrales kill/go</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'contactos']">Contactos</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'entrevistas']">Entrevistas</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'tablero']">Tablero de KPIs</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'veredictos']">Veredicto</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', i.id, 'costo']">Costo</a>
+  </nav>
+
+  @if (errorAccion(); as msg) {
+    <p class="error-general" role="alert">{{ msg }}</p>
+  }
+
+  <div class="acciones">
+    @if (esArchivada()) {
+      <button
+        type="button"
+        class="boton-primario"
+        [disabled]="accionEnCurso()"
+        (click)="desarchivar()"
+      >
+        {{ accionEnCurso() ? 'Reabriendo…' : 'Reabrir idea' }}
+      </button>
+    } @else {
+      <a class="boton-primario" [routerLink]="['/ideas', i.id, 'editar']">Editar</a>
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="accionEnCurso()"
+        (click)="archivar()"
+      >
+        {{ accionEnCurso() ? 'Archivando…' : 'Archivar' }}
+      </button>
+    }
+  </div>
+}

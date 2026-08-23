@@ -1,0 +1,82 @@
+<div class="cabecera">
+  <h1>Costo estimado</h1>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el costo…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    <p>No se pudo cargar el costo estimado. ({{ err.codigo }})</p>
+    <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+  </div>
+} @else if (costoUsuario(); as c) {
+  <section class="detalle">
+    <p class="total">
+      Total estimado:
+      <strong>{{ c.costoEstimadoTotal | currency: c.moneda : 'symbol' : '1.2-4' }}</strong>
+    </p>
+    <p class="aclaracion" role="note">{{ c.aclaracion }}</p>
+    @if (c.urlFacturacion) {
+      <p>
+        <a class="boton-secundario" [href]="c.urlFacturacion" target="_blank" rel="noopener">
+          Recargar saldo en el panel del proveedor
+        </a>
+      </p>
+    }
+  </section>
+
+  <section class="detalle">
+    <h2>Por idea</h2>
+    @if (c.costoPorIdea.length) {
+      <ul class="lista" aria-label="Costo por idea">
+        @for (idea of c.costoPorIdea; track idea.ideaId) {
+          <li class="fila">
+            <a [routerLink]="['/ideas', idea.ideaId, 'costo']">{{ idea.titulo }}</a>
+            <span class="valor">{{ idea.costoEstimado | currency: c.moneda : 'symbol' : '1.2-4' }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="vacio">Aún no hay consumo de IA en ninguna idea.</p>
+    }
+  </section>
+
+  <section class="detalle">
+    <h2>Tabla de precios</h2>
+    <p class="contexto">Tarifas por millón de tokens de la lista curada (por si comparas modelos).</p>
+    @if (precios().length) {
+      <div class="tabla-scroll">
+        <table class="tabla-precios">
+          <thead>
+            <tr>
+              <th>Proveedor</th>
+              <th>Modelo</th>
+              <th>Entrada / 1M</th>
+              <th>Salida / 1M</th>
+              <th>Entrada cacheada / 1M</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of precios(); track p.proveedor + p.modeloId) {
+              <tr>
+                <td>{{ p.proveedor }}</td>
+                <td>{{ p.modeloId }}</td>
+                <td>{{ p.precioEntradaPorMillon | currency: p.moneda : 'symbol' : '1.2-4' }}</td>
+                <td>{{ p.precioSalidaPorMillon | currency: p.moneda : 'symbol' : '1.2-4' }}</td>
+                <td>
+                  @if (p.precioEntradaCacheadaPorMillon !== null) {
+                    {{ p.precioEntradaCacheadaPorMillon | currency: p.moneda : 'symbol' : '1.2-4' }}
+                  } @else {
+                    —
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="vacio">La tabla de precios no está disponible.</p>
+    }
+  </section>
+}

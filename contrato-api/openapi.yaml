@@ -104,8 +104,11 @@ paths:
   /usuarios/login:
     post:
       tags: [usuarios]
-      summary: Autenticarse y obtener tokens
-      description: Endpoint público. Devuelve `accessToken` y `refreshToken`.
+      summary: Autenticarse y obtener la sesión
+      description: |
+        Endpoint público. Devuelve el `accessToken` en el cuerpo y entrega el `refreshToken` en
+        una cookie `HttpOnly; Secure; SameSite=Strict` (ver `refreshCookie`). El cuerpo NO incluye
+        el refresh token.
       operationId: iniciarSesion
       security: []
       requestBody:
@@ -117,6 +120,13 @@ paths:
       responses:
         '200':
           description: Autenticación correcta.
+          headers:
+            Set-Cookie:
+              description: |
+                Cookie `refreshToken=<opaco>; HttpOnly; Secure; SameSite=Strict; Path=/usuarios;
+                Max-Age=<TTL>`. El navegador la reenvía a `refresh` y `logout`.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -129,19 +139,21 @@ paths:
       tags: [usuarios]
       summary: Renovar el token de acceso
       description: |
-        Endpoint público (el `accessToken` puede haber expirado). Intercambia un `refreshToken`
-        válido por un `TokenRespuesta` nuevo. Un `refreshToken` inválido o expirado → `401`.
+        Endpoint basado en la cookie de refresh (el `accessToken` puede haber expirado). Lee el
+        `refreshToken` de la cookie `refreshToken`, lo **rota** (invalida el usado, emite uno
+        nuevo) y devuelve un `TokenRespuesta` nuevo con una `Set-Cookie` rotada. No recibe cuerpo.
+        Cookie ausente o refresh token inválido/expirado/revocado → `401`.
       operationId: refrescarToken
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefrescarTokenRequest'
+      security:
+        - refreshCookie: []
       responses:
         '200':
           description: Token renovado.
+          headers:
+            Set-Cookie:
+              description: Cookie `refreshToken` rotada (mismo formato que en login).
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -153,19 +165,22 @@ paths:
     post:
       tags: [usuarios]
       summary: Cerrar sesión
-      description: Invalida el `refreshToken` de la sesión. Requiere estar autenticado.
+      description: |
+        Endpoint basado en la cookie de refresh; no exige `accessToken` válido (así el cierre
+        funciona aunque el access token haya expirado). Lee el `refreshToken` de la cookie, lo
+        invalida y **limpia la cookie** en la respuesta. No recibe cuerpo. Es idempotente: sin
+        cookie o con una ya revocada responde `204` igualmente.
       operationId: cerrarSesion
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefrescarTokenRequest'
+      security:
+        - refreshCookie: []
       responses:
         '204':
-          description: Sesión cerrada; el `refreshToken` deja de ser válido.
-        '401':
-          $ref: '#/components/responses/NoAutenticado'
+          description: Sesión cerrada; el `refreshToken` deja de ser válido y la cookie se limpia.
+          headers:
+            Set-Cookie:
+              description: Cookie `refreshToken` limpiada (expiración inmediata).
+              schema:
+                type: string
 
   /usuarios/yo:
     get:
@@ -725,7 +740,23 @@ paths:
     delete:
       tags: [contactos]
       summary: Eliminar un contacto
-      description: Elimina un contacto propio registrado por error.
+      description: |
+        Elimina un contacto propio registrado por error, **siempre que ninguna entrevista lo
+        referencie**.
+
+        Si al menos una entrevista lo usa, responde `409 CONFLICTO` y el contacto permanece. Esto
+        defiende **RNF-14**: una entrevista no puede existir sin idea y contacto válidos del mismo
+        usuario. El contrato ya lo exige al crearla (`422 ENTREVISTA_SIN_VINCULO`); eliminar el
+        contacto por detrás dejaría la entrevista en ese mismo estado inválido, y además seguiría
+        alimentando los KPIs de outreach y el veredicto desde un contacto que ya no existe.
+
+        La condición es la **existencia de entrevistas que referencien el contacto**, no su `estado`:
+        un contacto en estado `entrevistado` cuyas entrevistas se hayan eliminado sí puede borrarse,
+        porque no queda ninguna referencia huérfana.
+
+        Para eliminar un contacto que ya tiene evidencia, elimina antes sus entrevistas con
+        `DELETE /ideas/{id}/entrevistas/{idEntrevista}`. Destruir evidencia es posible, pero debe ser
+        un acto deliberado y por entrevista, nunca un efecto colateral de borrar una ficha del CRM.
       operationId: eliminarContacto
       parameters:
         - $ref: '#/components/parameters/idIdea'
@@ -739,6 +770,8 @@ paths:
           $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
 
   /ideas/{id}/contactos/{idContacto}/estado:
     post:
@@ -881,7 +914,19 @@ paths:
     patch:
       tags: [entrevistas]
       summary: Editar un guión propio
-      description: Edita el `nombre`, la `descripcion` y/o las `preguntas` (reemplazando el conjunto ordenado).
+      description: |
+        Edita el `nombre`, la `descripcion` y/o las `preguntas` (reemplazando el conjunto ordenado).
+
+        **Un guión con evidencia es inmutable en su estructura.** Si el guión ya está referenciado
+        por al menos una entrevista y el cuerpo incluye `preguntas`, responde `409 CONFLICTO` y las
+        preguntas permanecen intactas. No es una restricción burocrática: cada `RespuestaEntrevista`
+        apunta a un `preguntaId` de este guión, y como `PreguntaRequest` no lleva `id`, un reemplazo
+        rompería esa referencia. Y aunque se conservara el identificador, cambiar el **texto** de una
+        pregunta ya respondida haría que la respuesta contestara a otra cosa, corrompiendo en silencio
+        la evidencia sobre la que se calculan scores, KPIs y veredicto (RNF-15).
+
+        El `nombre` y la `descripcion` **siguen siendo editables** aunque haya entrevistas: no
+        participan en la evidencia. Un guión sin entrevistas se edita sin restricción alguna.
       operationId: actualizarGuion
       parameters:
         - $ref: '#/components/parameters/idGuion'
@@ -904,11 +949,21 @@ paths:
           $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
         '422':
           $ref: '#/components/responses/ValidacionFallida'
     delete:
       tags: [entrevistas]
       summary: Eliminar un guión propio
+      description: |
+        Elimina un guión propio **que ninguna entrevista referencie**.
+
+        Si al menos una entrevista lo usa, responde `409 CONFLICTO` y el guión permanece: borrarlo
+        dejaría colgando tanto su `guionId` como los `preguntaId` de todas las respuestas ya
+        registradas, y esas entrevistas son la evidencia desde la que deben poder reconstruirse los
+        KPIs (RNF-15). Es la misma postura que el contrato ya sostiene al permitir **archivar** una
+        idea en lugar de eliminarla.
       operationId: eliminarGuion
       parameters:
         - $ref: '#/components/parameters/idGuion'
@@ -921,6 +976,8 @@ paths:
           $ref: '#/components/responses/AccesoDenegado'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
 
   # --- Entrevistas y scoring por IA (épica E4), anidadas bajo la idea ---
 
@@ -1044,6 +1101,18 @@ paths:
     delete:
       tags: [entrevistas]
       summary: Eliminar una entrevista
+      description: |
+        Elimina una entrevista propia y **devuelve el contacto vinculado al estado `agendado`**,
+        cerrando el ciclo que abre el registro (que lo mueve a `entrevistado`).
+
+        `agendado` no es una elección arbitraria: el embudo prohíbe los saltos, así que `entrevistado`
+        solo es alcanzable desde `agendado` y ese es su estado inmediatamente anterior. No hace falta
+        historial para restaurarlo.
+
+        La reversión es necesaria, no cosmética. Sin ella, el `409 CONFLICTO` que impide registrar una
+        entrevista sobre un contacto ya `entrevistado` haría **irreversible** cualquier entrevista
+        creada por error: se podría borrar la entrevista, pero no registrar la correcta, y esa persona
+        quedaría inentrevistable de forma permanente.
       operationId: eliminarEntrevista
       parameters:
         - $ref: '#/components/parameters/idIdea'
@@ -1552,6 +1621,15 @@ components:
       description: |
         JWT emitido por ValidaLab tras el login. El `owner_id` del usuario se deriva del token;
         nunca se acepta como entrada del cliente.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+      description: |
+        Refresh token opaco transportado en una cookie `HttpOnly; Secure; SameSite=Strict` con
+        `Path` acotado a las rutas de sesión. El navegador la envía automáticamente a
+        `/usuarios/refresh` y `/usuarios/logout`; el JavaScript del cliente NUNCA la lee ni la
+        escribe. La emite `login`, la rota `refresh` y la limpia `logout`.
 
   parameters:
     pagina:
@@ -1808,24 +1886,18 @@ components:
         password:
           type: string
           format: password
-    RefrescarTokenRequest:
-      type: object
-      required: [refreshToken]
-      properties:
-        refreshToken:
-          type: string
-          description: Token de renovación obtenido en el login.
     TokenRespuesta:
       type: object
-      description: Tokens de sesión emitidos en login y refresh.
-      required: [accessToken, refreshToken, tokenTipo, expiraEn, usuario]
+      description: |
+        Sesión emitida en login y refresh. El `refreshToken` NO viaja aquí: se entrega en la
+        cookie `HttpOnly` `refreshToken` (ver el esquema de seguridad `refreshCookie`). El cuerpo
+        solo lleva el `accessToken`, que el cliente usa en `Authorization: Bearer` y mantiene en
+        memoria.
+      required: [accessToken, tokenTipo, expiraEn, usuario]
       properties:
         accessToken:
           type: string
           description: "JWT de acceso para `Authorization: Bearer`."
-        refreshToken:
-          type: string
-          description: Token de renovación para `POST /usuarios/refresh`.
         tokenTipo:
           type: string
           enum: [Bearer]
@@ -2365,9 +2437,31 @@ components:
       type: string
       description: Estado del scoring del agente sobre la entrevista.
       enum:
-        - pendiente   # scoring disparado, aún sin resultado
+        - pendiente   # scoring aún no disparado / respuestas cambiadas, a la espera
+        - procesando  # el agente está ejecutando el scoring (asíncrono)
         - puntuada    # el agente produjo un score válido
         - fallida     # la salida del agente no validó tras reintentos (SALIDA_AGENTE_INVALIDA)
+    SenalesEstructuradas:
+      type: object
+      readOnly: true
+      description: |
+        Señales estructuradas por entrevista que el agente clasifica al puntuar. Son el insumo de los
+        KPIs de señal de problema/pago (E5). Ausentes en scores de una rúbrica anterior (cuentan como
+        `false` al agregarlos).
+      required: [dolorConfirmado, dolorUrgente, sinSolucionActual, disposicionPago]
+      properties:
+        dolorConfirmado:
+          type: boolean
+          description: El entrevistado confirma que el problema existe y le afecta.
+        dolorUrgente:
+          type: boolean
+          description: Lo describe como urgente o prioritario.
+        sinSolucionActual:
+          type: boolean
+          description: Hoy no usa una solución que le sirva (dolor sin resolver).
+        disposicionPago:
+          type: boolean
+          description: Muestra interés explícito en pagar por una solución.
     ScoreEntrevista:
       type: object
       readOnly: true
@@ -2393,6 +2487,8 @@ components:
           minimum: 0
           maximum: 100
           description: Nivel de confianza del agente en el score (0–100).
+        senalesEstructuradas:
+          $ref: '#/components/schemas/SenalesEstructuradas'
         proveedor:
           type: string
           description: Proveedor de IA que produjo el score (config BYOK del usuario).

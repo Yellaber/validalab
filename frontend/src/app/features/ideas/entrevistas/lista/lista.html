@@ -1,0 +1,105 @@
+<div class="cabecera">
+  <h1>Entrevistas</h1>
+  <div class="acciones-fila">
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'entrevistas', 'reevaluacion']">
+      Re-evaluar en lote
+    </a>
+    <a class="boton-primario" [routerLink]="['/ideas', ideaId, 'entrevistas', 'nueva']">
+      Registrar entrevista
+    </a>
+  </div>
+</div>
+
+<p class="intro">
+  La evidencia de esta idea. Cada entrevista vincula un contacto y el guión con el que se condujo, y
+  guarda lo que respondió: de aquí salen los KPIs de descubrimiento y, después, el veredicto.
+</p>
+
+<div class="filtros">
+  <label for="filtro-contacto">Contacto</label>
+  <select id="filtro-contacto" (change)="cambiarFiltroContacto($any($event.target).value)">
+    <option value="">Todos</option>
+    @for (c of contactosDelFiltro(); track c.id) {
+      <option [value]="c.id">{{ c.nombre }}</option>
+    }
+  </select>
+
+  <label for="filtro-estado">Scoring</label>
+  <select id="filtro-estado" (change)="cambiarFiltroEstado($any($event.target).value)">
+    <option value="">Todos</option>
+    @for (estado of estadosScoring; track estado) {
+      <option [value]="estado">{{ etiquetaEstado[estado] }}</option>
+    }
+  </select>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando las entrevistas…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else {
+      <p>No se pudieron cargar las entrevistas. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+  </div>
+} @else if (vacio()) {
+  <div class="vacio">
+    <p>Todavía no has registrado entrevistas para esta idea.</p>
+    <a class="boton-primario" [routerLink]="['/ideas', ideaId, 'entrevistas', 'nueva']">
+      Registra la primera
+    </a>
+  </div>
+} @else {
+  <ul class="lista">
+    @for (f of filas(); track f.entrevista.id) {
+      <li>
+        <a class="tarjeta" [routerLink]="['/ideas', ideaId, 'entrevistas', f.entrevista.id]">
+          <span class="estado estado-{{ f.entrevista.estadoScoring }}">
+            {{ etiquetaEstado[f.entrevista.estadoScoring] }}
+          </span>
+          <h2>{{ f.contacto }}</h2>
+          <p class="meta">
+            <span>{{ f.guion }}</span>
+            <span>{{ f.entrevista.fechaCreacion.slice(0, 10) }}</span>
+            <span>
+              @if (f.entrevista.respuestas.length === 1) {
+                1 respuesta
+              } @else {
+                {{ f.entrevista.respuestas.length }} respuestas
+              }
+            </span>
+          </p>
+        </a>
+      </li>
+    }
+  </ul>
+
+  @if (paginacion(); as pag) {
+    <nav class="paginacion" aria-label="Paginación de entrevistas">
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina <= 1"
+        (click)="paginaAnterior()"
+      >
+        Anterior
+      </button>
+      <span>Página {{ pag.pagina }} de {{ pag.totalPaginas }}</span>
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina >= pag.totalPaginas"
+        (click)="paginaSiguiente()"
+      >
+        Siguiente
+      </button>
+    </nav>
+  }
+}

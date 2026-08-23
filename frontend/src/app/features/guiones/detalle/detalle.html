@@ -1,0 +1,71 @@
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el guión…</p>
+} @else if (error(); as err) {
+  <!-- El aviso va EN LUGAR del contenido: un guión ajeno no revela ni su nombre. -->
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a este guión.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Este guión no existe.</p>
+    } @else {
+      <p>No se pudo cargar el guión. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+    <a class="boton-secundario" routerLink="/guiones">Volver a los guiones</a>
+  </div>
+} @else if (guion(); as g) {
+  <div class="cabecera">
+    <h1>{{ g.nombre }}</h1>
+    <a class="boton-secundario" routerLink="/guiones">Volver</a>
+  </div>
+
+  <section class="detalle">
+    <dl>
+      @if (g.descripcion) {
+        <dt>Descripción</dt>
+        <dd>{{ g.descripcion }}</dd>
+      }
+
+      <dt>Preguntas</dt>
+      <dd>
+        <ol class="preguntas-detalle">
+          @for (pregunta of preguntas(); track pregunta.id) {
+            <li>{{ pregunta.texto }}</li>
+          }
+        </ol>
+      </dd>
+    </dl>
+  </section>
+
+  @if (errorAccion(); as msg) {
+    <p class="error-general" role="alert">{{ msg }}</p>
+  }
+
+  <div class="acciones-fila acciones">
+    <a class="boton-secundario" [routerLink]="['/guiones', g.id, 'editar']">Editar</a>
+
+    @if (confirmandoBorrado()) {
+      <span class="confirmacion" role="alert">
+        ¿Eliminar «{{ g.nombre }}»?
+        <button
+          type="button"
+          class="boton-peligro"
+          [disabled]="borrando()"
+          (click)="confirmarBorrado()"
+        >
+          {{ borrando() ? 'Eliminando…' : 'Sí, eliminar' }}
+        </button>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="borrando()"
+          (click)="cancelarBorrado()"
+        >
+          Cancelar
+        </button>
+      </span>
+    } @else {
+      <button type="button" class="boton-peligro" (click)="pedirBorrado()">Eliminar</button>
+    }
+  </div>
+}

@@ -1,0 +1,30 @@
+# Base de datos PostgreSQL para desarrollo local del backend de ValidaLab.
+# Compose lee automáticamente el archivo `.env` de este directorio, así que las
+# credenciales se mantienen sincronizadas con la configuración del backend.
+#
+#   docker compose up -d        # levanta la BD en segundo plano
+#   docker compose ps           # estado / healthcheck
+#   docker compose down         # detiene (conserva los datos en el volumen)
+#   docker compose down -v      # detiene y BORRA los datos
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: validalab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-validalab}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-validalab}
+      POSTGRES_DB: ${DB_DATABASE:-validalab}
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - validalab-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-validalab} -d ${DB_DATABASE:-validalab}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  validalab-postgres-data:

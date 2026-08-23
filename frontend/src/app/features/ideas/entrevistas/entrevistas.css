@@ -1,0 +1,232 @@
+/** Lo propio de las pantallas de entrevistas; la base está en `shared/dominio.css`. */
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.meta span + span::before {
+  content: '·';
+  margin-right: 0.5rem;
+  color: #d1d5db;
+}
+
+/* Estados del scoring: neutro por defecto, verde puntuada, ámbar fallida. */
+
+.estado-puntuada {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.estado-fallida {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.estado-procesando {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* --- Captura de respuestas contra el guión --- */
+
+.preguntas-respuesta {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pregunta-respuesta .enunciado {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.pregunta-respuesta .indice {
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+
+.pregunta-respuesta textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.pregunta-respuesta textarea:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.aviso-scoring {
+  margin: 1rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.sin-entrevistables {
+  padding: 1.5rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.75rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* --- Editor de citas --- */
+
+.citas {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.citas > legend {
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.nota-citas {
+  margin: 0.35rem 0 0.75rem;
+  color: #6b7280;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.filas-cita {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fila-cita {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.fila-cita .campos {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fila-cita input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.fila-cita input:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.quitar-cita {
+  width: 2rem;
+  height: 2.4rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.anadir-cita {
+  margin-top: 0.75rem;
+}
+
+/* --- Detalle --- */
+
+.respuestas-detalle {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.respuestas-detalle li {
+  margin-bottom: 1rem;
+}
+
+.respuestas-detalle .enunciado {
+  display: block;
+  color: #6b7280;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.respuestas-detalle .texto {
+  display: block;
+  margin-top: 0.15rem;
+  color: #1f2937;
+  line-height: 1.6;
+}
+
+.citas-detalle {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+  color: #1f2937;
+  line-height: 1.7;
+}
+
+.citas-detalle .contexto {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* --- Acciones de scoring y formulario de ajuste (viven en el detalle) --- */
+
+.acciones-scoring {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.aviso-consumo-accion {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.formulario-ajuste {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #f9fafb;
+}

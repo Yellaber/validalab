@@ -1,0 +1,62 @@
+<div class="cabecera">
+  <h1>Portafolio de ideas</h1>
+  <a class="boton-primario" routerLink="/ideas/nueva">Nueva idea</a>
+</div>
+
+<div class="filtros">
+  <label for="filtro-estado">Filtrar por estado</label>
+  <select id="filtro-estado" (change)="cambiarFiltro($any($event.target).value)">
+    <option value="">Todos</option>
+    @for (estado of estados; track estado) {
+      <option [value]="estado">{{ etiqueta[estado] }}</option>
+    }
+  </select>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando tu portafolio…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    <p>No se pudo cargar el portafolio. ({{ err.codigo }})</p>
+    <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+  </div>
+} @else if (vacio()) {
+  <div class="vacio">
+    <p>Todavía no tienes ideas.</p>
+    <a class="boton-primario" routerLink="/ideas/nueva">Crea tu primera idea</a>
+  </div>
+} @else {
+  <ul class="lista">
+    @for (idea of ideasPagina(); track idea.id) {
+      <li>
+        <a class="tarjeta" [routerLink]="['/ideas', idea.id]">
+          <span class="estado">{{ etiqueta[idea.estado] }}</span>
+          <h2>{{ idea.titulo }}</h2>
+          <p>{{ idea.problema }}</p>
+        </a>
+      </li>
+    }
+  </ul>
+
+  @if (paginacion(); as pag) {
+    <nav class="paginacion" aria-label="Paginación del portafolio">
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina <= 1"
+        (click)="paginaAnterior()"
+      >
+        Anterior
+      </button>
+      <span>Página {{ pag.pagina }} de {{ pag.totalPaginas }}</span>
+      <button
+        type="button"
+        class="boton-secundario"
+        [disabled]="pag.pagina >= pag.totalPaginas"
+        (click)="paginaSiguiente()"
+      >
+        Siguiente
+      </button>
+    </nav>
+  }
+}

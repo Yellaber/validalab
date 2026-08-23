@@ -1,0 +1,94 @@
+<section class="bloque-score">
+  <div class="valores">
+    <div class="valor">
+      <span class="cifra">{{ score().score }}</span>
+      <span class="etiqueta-valor">Score del agente</span>
+    </div>
+
+    @if (ajuste(); as a) {
+      <div class="valor ajustado">
+        <span class="cifra">{{ a.scoreAjustado }}</span>
+        <span class="etiqueta-valor">Tu ajuste</span>
+      </div>
+    }
+
+    <div class="confianza">
+      <span class="etiqueta-valor">Confianza</span>
+      <span>{{ score().confianza }}%</span>
+    </div>
+  </div>
+
+  @if (ajuste(); as a) {
+    <!-- Se conservan ambos valores; el usuario debe saber cuál cuenta. -->
+    <p class="prevalece">
+      Se conservan los dos: el del agente como referencia y el tuyo como corrección.
+      <strong>En los KPIs cuenta tu ajuste.</strong>
+    </p>
+    <p class="nota-ajuste"><span class="enunciado">Motivo del ajuste</span> {{ a.nota }}</p>
+  }
+
+  <!-- La justificación del agente permanece aunque se haya ajustado el score. -->
+  <p class="justificacion">{{ score().justificacion }}</p>
+
+  @if (score().senales.length) {
+    <ul class="senales">
+      @for (senal of score().senales; track senal) {
+        <li>{{ senal }}</li>
+      }
+    </ul>
+  }
+
+  <div class="senales-estructuradas">
+    @if (senalesEstructuradas(); as senales) {
+      <ul>
+        @for (s of senales; track s.etiqueta) {
+          <li [class.detectada]="s.detectada">
+            <span aria-hidden="true">{{ s.detectada ? '✓' : '·' }}</span>
+            {{ s.etiqueta }}
+            <span class="sr-only">{{ s.detectada ? ': detectada' : ': no detectada' }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="sin-senales">Esta versión de la rúbrica no clasificó señales estructuradas.</p>
+    }
+  </div>
+
+  @if (hayTrazabilidad() || hayCosto()) {
+    <dl class="auditoria">
+      @if (score().proveedor; as proveedor) {
+        <dt>Proveedor</dt>
+        <dd>{{ proveedor }}</dd>
+      }
+      @if (score().modelo; as modelo) {
+        <dt>Modelo</dt>
+        <dd>{{ modelo }}</dd>
+      }
+      @if (score().rubricaVersion; as rubrica) {
+        <dt>Rúbrica</dt>
+        <dd>{{ rubrica }}</dd>
+      }
+      @if (score().fechaScoring; as fecha) {
+        <dt>Puntuada el</dt>
+        <dd>{{ fecha.slice(0, 10) }}</dd>
+      }
+
+      @if (hayCosto()) {
+        <dt>Consumo estimado</dt>
+        <dd>
+          @if (score().costoEstimado !== undefined) {
+            {{ score().costoEstimado }} {{ score().moneda ?? 'USD' }}
+          }
+          @if (score().tokensEntrada !== undefined || score().tokensSalida !== undefined) {
+            <span class="tokens">
+              ({{ score().tokensEntrada ?? 0 }} + {{ score().tokensSalida ?? 0 }} tokens)
+            </span>
+          }
+          <span class="aviso-consumo">
+            Es lo que costó esta puntuación vía ValidaLab, no el saldo de tu cuenta del proveedor.
+          </span>
+        </dd>
+      }
+    </dl>
+  }
+</section>
