@@ -1101,6 +1101,18 @@ paths:
     delete:
       tags: [entrevistas]
       summary: Eliminar una entrevista
+      description: |
+        Elimina una entrevista propia y **devuelve el contacto vinculado al estado `agendado`**,
+        cerrando el ciclo que abre el registro (que lo mueve a `entrevistado`).
+
+        `agendado` no es una elección arbitraria: el embudo prohíbe los saltos, así que `entrevistado`
+        solo es alcanzable desde `agendado` y ese es su estado inmediatamente anterior. No hace falta
+        historial para restaurarlo.
+
+        La reversión es necesaria, no cosmética. Sin ella, el `409 CONFLICTO` que impide registrar una
+        entrevista sobre un contacto ya `entrevistado` haría **irreversible** cualquier entrevista
+        creada por error: se podría borrar la entrevista, pero no registrar la correcta, y esa persona
+        quedaría inentrevistable de forma permanente.
       operationId: eliminarEntrevista
       parameters:
         - $ref: '#/components/parameters/idIdea'
