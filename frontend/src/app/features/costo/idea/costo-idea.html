@@ -1,0 +1,66 @@
+<div class="cabecera">
+  <h1>Costo estimado de la idea</h1>
+  <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+</div>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Cargando el costo…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+    } @else {
+      <p>No se pudo cargar el costo de la idea. ({{ err.codigo }})</p>
+    }
+    <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+  </div>
+} @else if (costoIdea(); as c) {
+  <section class="detalle">
+    <p class="total">
+      Total estimado:
+      <strong>{{ c.costoEstimadoTotal | currency: c.moneda : 'symbol' : '1.2-4' }}</strong>
+    </p>
+    <p class="aclaracion" role="note">{{ c.aclaracion }}</p>
+    @if (c.urlFacturacion) {
+      <p>
+        <a class="boton-secundario" [href]="c.urlFacturacion" target="_blank" rel="noopener">
+          Recargar saldo en el panel del proveedor
+        </a>
+      </p>
+    }
+  </section>
+
+  <section class="detalle">
+    <h2>Por tarea</h2>
+    @if (desglose().length) {
+      <div class="tabla-scroll">
+        <table class="tabla-costo">
+          <thead>
+            <tr>
+              <th>Tarea</th>
+              <th>Llamadas</th>
+              <th>Tokens entrada</th>
+              <th>Tokens salida</th>
+              <th>Costo estimado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of desglose(); track t.tarea) {
+              <tr>
+                <td>{{ t.nombre }}</td>
+                <td>{{ t.llamadas }}</td>
+                <td>{{ t.tokensEntrada }}</td>
+                <td>{{ t.tokensSalida }}</td>
+                <td>{{ t.costoEstimado | currency: c.moneda : 'symbol' : '1.2-4' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="vacio">Aún no hay consumo de IA en esta idea.</p>
+    }
+  </section>
+}
