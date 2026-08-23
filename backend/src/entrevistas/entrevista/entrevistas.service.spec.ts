@@ -262,6 +262,47 @@ describe('EntrevistasService.ajustarScore', () => {
   });
 });
 
+describe('EntrevistasService.puntuar', () => {
+  it('re-dispara el scoring y devuelve el estadoScoring actualizado', async () => {
+    const { servicio, repo, agente } = crear();
+    repo.findOne
+      .mockResolvedValueOnce(entrevistaDe({ estadoScoring: 'fallida' }))
+      .mockResolvedValueOnce(
+        entrevistaDe({
+          estadoScoring: 'puntuada',
+          score: { score: 7 } as never,
+        }),
+      );
+
+    const dto = await servicio.puntuar(OWNER, IDEA, 'e1');
+
+    expect(agente.solicitarScoring).toHaveBeenCalledWith(
+      OWNER,
+      expect.objectContaining({ id: 'e1' }),
+    );
+    expect(dto.estadoScoring).toBe('puntuada');
+  });
+
+  it('idea ajena → AccesoDenegado (403)', async () => {
+    const { servicio, ideas, agente } = crear();
+    ideas.asegurarPropia.mockRejectedValue(new AccesoDenegadoException());
+
+    await expect(servicio.puntuar(OWNER, IDEA, 'e1')).rejects.toBeInstanceOf(
+      AccesoDenegadoException,
+    );
+    expect(agente.solicitarScoring).not.toHaveBeenCalled();
+  });
+
+  it('una entrevista inexistente → RecursoNoEncontrado (404)', async () => {
+    const { servicio, agente } = crear();
+
+    await expect(servicio.puntuar(OWNER, IDEA, 'e1')).rejects.toBeInstanceOf(
+      RecursoNoEncontradoException,
+    );
+    expect(agente.solicitarScoring).not.toHaveBeenCalled();
+  });
+});
+
 describe('EntrevistasService.eliminar', () => {
   it('elimina una entrevista propia', async () => {
     const { servicio, repo } = crear();
