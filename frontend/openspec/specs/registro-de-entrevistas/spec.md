@@ -4,7 +4,7 @@
 TBD - created by archiving change registro-de-entrevistas. Update Purpose after archive.
 ## Requirements
 ### Requirement: Listado paginado de las entrevistas de una idea
-El cliente SHALL presentar el listado de las entrevistas de una idea propia consumiendo `GET /ideas/{id}/entrevistas` con `pagina` y `porPagina`, mostrando de cada entrevista el **nombre** del contacto entrevistado, el **nombre** del guión usado, su fecha y su `estadoScoring`. El cliente NO SHALL mostrar identificadores en crudo: SHALL resolver `contactoId` y `guionId` a nombres, y cuando un nombre no pueda resolverse SHALL mostrar un texto neutro en lugar del identificador.
+El cliente SHALL presentar el listado de las entrevistas de una idea propia consumiendo `GET /ideas/{id}/entrevistas` con `pagina` y `porPagina`, mostrando de cada entrevista el **nombre** del contacto entrevistado, el **nombre** del guión usado, su fecha y su `estadoScoring`. El cliente NO SHALL mostrar identificadores en crudo: SHALL resolver `contactoId` y `guionId` a nombres, y cuando un nombre no pueda resolverse SHALL mostrar un texto neutro en lugar del identificador. Desde el listado el cliente MUST ofrecer además el acceso a la **re-evaluación en lote** de las entrevistas de la idea (tras un cambio de rúbrica), junto a las acciones de registrar y volver.
 
 #### Scenario: Listado con entrevistas
 - **WHEN** el usuario abre el listado de entrevistas de una idea y la respuesta trae entrevistas
@@ -25,6 +25,10 @@ El cliente SHALL presentar el listado de las entrevistas de una idea propia cons
 #### Scenario: Error al cargar el listado
 - **WHEN** la carga del listado falla
 - **THEN** el cliente muestra un aviso derivado del `codigo` del error y ofrece reintentar
+
+#### Scenario: Acceso a la re-evaluación en lote
+- **WHEN** el usuario ve el listado de entrevistas de una idea suya
+- **THEN** dispone del acceso a la re-evaluación en lote de esas entrevistas
 
 ### Requirement: Filtro por contacto y por estado de scoring
 El cliente SHALL ofrecer los dos filtros que expone el contrato para esta colección, `contactoId` y `estadoScoring`, enviándolos como parámetros de la petición. Filtrar SHALL provocar una petición nueva y NO SHALL recortarse en cliente. El filtro de estado SHALL ofrecer los cuatro valores de `EstadoScoring`.

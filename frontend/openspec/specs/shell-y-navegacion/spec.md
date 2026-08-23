@@ -22,7 +22,7 @@ El cliente SHALL impedir que un usuario con sesión válida permanezca en `/logi
 - **THEN** el cliente lo redirige a la pantalla de inicio del shell
 
 ### Requirement: Shell autenticado con identidad y cierre de sesión
-El cliente SHALL presentar, para el usuario autenticado, un shell con un `<router-outlet>` para las rutas de dominio, que muestre la identidad del usuario en sesión (al menos su `nombre` o `email`) y ofrezca la acción de cerrar sesión. La ruta por defecto del shell SHALL renderizar el **listado del portafolio de ideas** (no un marcador de posición). El shell SHALL alojar las rutas hijas protegidas del dominio `ideas` (listado, alta, detalle, edición, **hipótesis de una idea**, **umbrales de una idea**, **contactos de una idea**, **detalle de un contacto**, las cuatro de **entrevistas de una idea** —listado, alta, detalle y edición—, las dos de **KPIs de una idea** —tablero y alertas—, las dos de **veredicto de una idea** —historial y detalle de un veredicto— y el **costo de una idea**) con carga diferida, de modo que sus chunks no se carguen para un usuario sin sesión. El shell SHALL alojar además, con la misma carga diferida, las rutas hijas protegidas de los dominios de primer nivel **`guiones`** (listado, alta, detalle y edición), **`configuracion`** (configuración BYOK del proveedor de IA) y **`costo`** (costo estimado total del usuario), que **no** cuelgan de ninguna idea.
+El cliente SHALL presentar, para el usuario autenticado, un shell con un `<router-outlet>` para las rutas de dominio, que muestre la identidad del usuario en sesión (al menos su `nombre` o `email`) y ofrezca la acción de cerrar sesión. La ruta por defecto del shell SHALL renderizar el **listado del portafolio de ideas** (no un marcador de posición). El shell SHALL alojar las rutas hijas protegidas del dominio `ideas` (listado, alta, detalle, edición, **hipótesis de una idea**, **umbrales de una idea**, **contactos de una idea**, **detalle de un contacto**, las cinco de **entrevistas de una idea** —listado, alta, detalle, edición y **re-evaluación en lote**—, las dos de **KPIs de una idea** —tablero y alertas—, las dos de **veredicto de una idea** —historial y detalle de un veredicto— y el **costo de una idea**) con carga diferida, de modo que sus chunks no se carguen para un usuario sin sesión. El shell SHALL alojar además, con la misma carga diferida, las rutas hijas protegidas de los dominios de primer nivel **`guiones`** (listado, alta, detalle y edición), **`configuracion`** (configuración BYOK del proveedor de IA) y **`costo`** (costo estimado total del usuario), que **no** cuelgan de ninguna idea.
 
 #### Scenario: El shell muestra la identidad y permite cerrar sesión
 - **WHEN** el usuario autenticado está en el shell
@@ -50,7 +50,7 @@ El cliente SHALL presentar, para el usuario autenticado, un shell con un `<route
 - **THEN** el cliente activa la ruta hija correspondiente dentro del shell cargando su chunk de forma diferida
 
 #### Scenario: Las rutas de entrevistas cuelgan del shell
-- **WHEN** el usuario autenticado navega al listado de entrevistas de una idea, al alta, al detalle de una o a su edición
+- **WHEN** el usuario autenticado navega al listado de entrevistas de una idea, al alta, al detalle de una, a su edición o a la re-evaluación en lote
 - **THEN** el cliente activa la ruta hija correspondiente dentro del shell cargando su chunk de forma diferida
 
 #### Scenario: Las rutas de KPIs cuelgan del shell
