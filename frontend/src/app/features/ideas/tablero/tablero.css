@@ -1,0 +1,198 @@
+/** Lo propio del tablero y sus alertas; la base está en `shared/dominio.css`. */
+
+/* --- Resumen global --- */
+
+.resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.conteo {
+  display: flex;
+  flex-direction: column;
+}
+
+.conteo .cifra {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.etiqueta-conteo {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.resumen .total {
+  margin: 0 0 0 auto;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+/* --- Zonas del semáforo. `sin_datos` es neutro, fuera de la escala. --- */
+
+.zona-go .cifra,
+.fila-kpi.zona-go .valor {
+  color: #047857;
+}
+
+.zona-observacion .cifra,
+.fila-kpi.zona-observacion .valor {
+  color: #b45309;
+}
+
+.zona-kill .cifra,
+.fila-kpi.zona-kill .valor {
+  color: #b91c1c;
+}
+
+.zona-sin-datos .cifra,
+.fila-kpi.zona-sin_datos .valor {
+  color: #9ca3af;
+}
+
+/* --- Grupos y KPIs --- */
+
+.grupo-kpi {
+  margin-bottom: 2rem;
+}
+
+.grupo-kpi h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.contexto-grupo {
+  margin: 0.25rem 0 0.75rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.lista-kpis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fila-kpi {
+  padding: 0.9rem 1.1rem;
+  border: 1px solid #e5e7eb;
+  border-left-width: 4px;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.fila-kpi.zona-go {
+  border-left-color: #10b981;
+}
+
+.fila-kpi.zona-observacion {
+  border-left-color: #f59e0b;
+}
+
+.fila-kpi.zona-kill {
+  border-left-color: #ef4444;
+}
+
+.fila-kpi.zona-sin_datos {
+  border-left-color: #d1d5db;
+}
+
+.cabecera-kpi {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cabecera-kpi h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+.fila-kpi .valor {
+  font-size: 1.1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fila-kpi .sin-evidencia {
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.fila-kpi .fraccion {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.fila-kpi .formula,
+.fila-kpi .umbrales {
+  margin: 0.35rem 0 0;
+  color: #6b7280;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* --- Alertas --- */
+
+.alerta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid #e5e7eb;
+  border-left-width: 4px;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.alerta.tipo-kill {
+  border-left-color: #ef4444;
+}
+
+.alerta.tipo-go {
+  border-left-color: #10b981;
+}
+
+.alerta.leida {
+  opacity: 0.6;
+}
+
+.alerta h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+.alerta .cruce {
+  margin: 0.25rem 0 0;
+  color: #4b5563;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.alerta .fecha {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}

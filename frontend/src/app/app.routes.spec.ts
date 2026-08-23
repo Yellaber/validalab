@@ -236,6 +236,58 @@ describe('rutas de guiones', () => {
     ctrl.expectNone((r) => r.url.endsWith('/entrevistas/nueva'));
   });
 
+  it('con sesión, el tablero de KPIs de una idea cuelga del shell', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/tablero');
+    harness.detectChanges();
+
+    TestBed.inject(HttpTestingController)
+      .expectOne((r) => r.url.endsWith('/ideas/i1/kpis'))
+      .flush({
+        ideaId: 'i1',
+        fechaCalculo: '2026-03-12T10:00:00.000Z',
+        resumen: { enZonaGo: 0, enObservacion: 0, enZonaKill: 0, sinDatos: 0, totalKpis: 0 },
+        kpis: [],
+      });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/tablero');
+    expect(harness.fixture.nativeElement.textContent).toContain('Tablero de KPIs');
+  });
+
+  it('con sesión, las alertas de una idea cuelgan del shell', async () => {
+    setup(true);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/alertas');
+    harness.detectChanges();
+
+    const ctrl = TestBed.inject(HttpTestingController);
+    ctrl
+      .expectOne((r) => r.url.endsWith('/ideas/i1/alertas'))
+      .flush({ datos: [], paginacion: { pagina: 1, porPagina: 20, total: 0, totalPaginas: 0 } });
+    ctrl
+      .expectOne((r) => r.url.endsWith('/ideas/i1/kpis'))
+      .flush({
+        ideaId: 'i1',
+        fechaCalculo: '2026-03-12T10:00:00.000Z',
+        resumen: { enZonaGo: 0, enObservacion: 0, enZonaKill: 0, sinDatos: 0, totalKpis: 0 },
+        kpis: [],
+      });
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe('/ideas/i1/alertas');
+    expect(harness.fixture.nativeElement.textContent).toContain('Alertas');
+  });
+
+  it('sin sesión, el tablero de una idea redirige a /login', async () => {
+    setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/ideas/i1/tablero');
+
+    expect(TestBed.inject(Router).url).toBe('/login');
+  });
+
   it('sin sesión, las rutas de entrevistas redirigen a /login', async () => {
     setup(false);
     const harness = await RouterTestingHarness.create();

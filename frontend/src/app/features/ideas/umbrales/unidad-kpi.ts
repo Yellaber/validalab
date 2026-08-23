@@ -99,6 +99,18 @@ export function textoDe(valor: number | null, unidad: string): string {
   return valor === null ? '' : aDecimal(aPresentacion(valor, unidad));
 }
 
+/**
+ * Valor **con su sufijo**, para mostrarlo fuera de un control de formulario (el
+ * tablero de KPIs y sus alertas). Devuelve cadena vacía si no hay valor: quien la
+ * llame decide cómo expresar la ausencia, que no siempre significa lo mismo.
+ *
+ * Vive aquí, y no en el tablero, para que un mismo KPI se lea **igual** en las dos
+ * pantallas: duplicar el formateo es lo que hizo falta corregir en su día.
+ */
+export function etiquetaValor(valor: number | null, unidad: string): string {
+  return valor === null ? '' : `${textoDe(valor, unidad)}${formatoDe(unidad).sufijo}`;
+}
+
 /** Parsea el texto del control; `null` si no es un número finito. */
 export function parsear(texto: string): number | null {
   const limpio = texto.trim();
