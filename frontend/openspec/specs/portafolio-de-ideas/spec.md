@@ -2,9 +2,7 @@
 
 ## Purpose
 Portafolio de ideas en el cliente Angular (épica E1): crear, listar (paginado y filtrado por estado), consultar, editar, archivar y desarchivar las ideas propias del usuario autenticado, con sus estados de carga/vacío/error y la traducción de los errores del contrato ramificada por `codigo`. Consume el tag `ideas` del contrato de API único, **solo los endpoints de la entidad `Idea`**: las colecciones que cuelgan de ella —hipótesis y umbrales kill/go (E2)— son competencia de `hipotesis-y-umbrales`, y las transiciones de veredicto `go`/`pivote`/`kill` (E6) quedan fuera. Desde el detalle de una idea se ofrece el acceso a su criterio de validación, pero su gestión no vive aquí. Se apoya en la plomería HTTP y de sesión del E0 (`cliente-http-y-errores`, `sesion-cliente`, `shell-y-navegacion`).
-
 ## Requirements
-
 ### Requirement: Servicio de recurso de ideas contra el contrato
 El cliente SHALL exponer un servicio inyectable de ideas que encapsule las llamadas HTTP del tag `ideas` del contrato (`POST /ideas`, `GET /ideas`, `GET /ideas/{id}`, `PATCH /ideas/{id}`, `POST /ideas/{id}/archivar`, `POST /ideas/{id}/desarchivar`). El servicio MUST derivar los tipos de petición/respuesta del contrato (`Idea`, `CrearIdeaRequest`, `ActualizarIdeaRequest`, `RespuestaPaginada<Idea>`) y NUNCA MUST enviar `ownerId` en el cuerpo ni en el query: el aislamiento por propietario lo gobierna el backend. El servicio MUST apoyarse en la plomería HTTP del E0 (interceptor de autorización que adjunta el `Bearer` y renueva ante `401`, y traducción del sobre `Error` a `ErrorApi`) sin reimplementarla.
 
@@ -58,7 +56,7 @@ El cliente SHALL ofrecer un formulario de creación con **Signal Forms** que exi
 - **THEN** el cliente muestra el error asociado a cada campo afectado
 
 ### Requirement: Consultar el detalle de una idea propia
-El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar). El detalle MUST ofrecer además el acceso a las **hipótesis**, a los **umbrales kill/go** y a los **contactos** de esa idea, como puntos de entrada a la definición de su criterio de validación y al descubrimiento que la alimenta.
+El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar). El detalle MUST ofrecer además el acceso a las **hipótesis**, a los **umbrales kill/go**, a los **contactos** y a las **entrevistas** de esa idea, como puntos de entrada a la definición de su criterio de validación y al descubrimiento que la alimenta.
 
 #### Scenario: Detalle de idea propia
 - **WHEN** el usuario abre una idea suya
@@ -79,6 +77,10 @@ El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`,
 #### Scenario: Acceso a los contactos de la idea
 - **WHEN** el usuario ve el detalle de una idea suya
 - **THEN** dispone también del acceso a los contactos de esa idea
+
+#### Scenario: Acceso a las entrevistas de la idea
+- **WHEN** el usuario ve el detalle de una idea suya
+- **THEN** dispone también del acceso a las entrevistas de esa idea
 
 ### Requirement: Editar el contenido de una idea propia
 El cliente SHALL permitir editar `titulo`, `descripcion`, `problema` y `segmentoBeachhead` de una idea propia mediante `PATCH /ideas/{id}`, reutilizando el formulario de Signal Forms con los valores actuales. El formulario NO SHALL exponer ningún control para fijar el `estado` a `go`, `pivote` o `kill`: esas transiciones provienen del veredicto aprobado (E6). Un `422 VALIDACION_FALLIDA` MUST mostrarse campo a campo; un `403 ACCESO_DENEGADO` como acceso denegado.
@@ -108,3 +110,4 @@ El cliente SHALL ofrecer, sobre una idea `archivada`, la acción de desarchivar 
 #### Scenario: La idea no estaba archivada
 - **WHEN** `POST /ideas/{id}/desarchivar` responde `409 CONFLICTO`
 - **THEN** el cliente muestra un mensaje que explica que la idea no está archivada, sin romper la vista
+
