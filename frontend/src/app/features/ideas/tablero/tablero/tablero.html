@@ -1,0 +1,90 @@
+<div class="cabecera">
+  <h1>Tablero de KPIs</h1>
+  <div class="acciones-fila">
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId]">Volver a la idea</a>
+    <a class="boton-secundario" [routerLink]="['/ideas', ideaId, 'alertas']">Alertas</a>
+  </div>
+</div>
+
+<p class="intro">
+  Cada KPI frente al listón que fijaste en los umbrales. El semáforo dice dónde está; decidir qué
+  hacer con la idea sigue siendo tuyo.
+</p>
+
+@if (cargando()) {
+  <p class="cargando" role="status">Calculando el tablero…</p>
+} @else if (error(); as err) {
+  <div class="error" role="alert">
+    @if (err.codigo === 'ACCESO_DENEGADO') {
+      <p>No tienes acceso a esta idea.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else if (err.codigo === 'RECURSO_NO_ENCONTRADO') {
+      <p>Esta idea no existe.</p>
+      <a class="boton-secundario" routerLink="/ideas">Volver al portafolio</a>
+    } @else {
+      <p>No se pudo cargar el tablero. ({{ err.codigo }})</p>
+      <button type="button" class="boton-secundario" (click)="reintentar()">Reintentar</button>
+    }
+  </div>
+} @else {
+  @if (resumen(); as r) {
+    <!-- El conteo viene del servidor; no se recuenta aquí. -->
+    <section class="resumen" aria-label="Resumen del tablero">
+      <div class="conteo zona-go">
+        <span class="cifra">{{ r.enZonaGo }}</span>
+        <span class="etiqueta-conteo">En zona go</span>
+      </div>
+      <div class="conteo zona-observacion">
+        <span class="cifra">{{ r.enObservacion }}</span>
+        <span class="etiqueta-conteo">En observación</span>
+      </div>
+      <div class="conteo zona-kill">
+        <span class="cifra">{{ r.enZonaKill }}</span>
+        <span class="etiqueta-conteo">En zona kill</span>
+      </div>
+      <div class="conteo zona-sin-datos">
+        <span class="cifra">{{ r.sinDatos }}</span>
+        <span class="etiqueta-conteo">Sin datos</span>
+      </div>
+      <p class="total">{{ r.totalKpis }} KPIs · calculado el {{ fechaCalculo() }}</p>
+    </section>
+  }
+
+  @for (grupo of grupos(); track grupo.clave) {
+    <section class="grupo-kpi">
+      <h2>{{ grupo.nombre }}</h2>
+      <p class="contexto-grupo">{{ grupo.contexto }}</p>
+
+      <ul class="lista-kpis">
+        @for (fila of grupo.filas; track fila.nombre) {
+          <li class="fila-kpi zona-{{ fila.zona }}">
+            <div class="cabecera-kpi">
+              <h3>{{ fila.nombre }}</h3>
+              @if (fila.sinDatos) {
+                <!-- `sin_datos` NO es cero: es que aún no hay evidencia que calcular. -->
+                <span class="valor sin-evidencia">Sin evidencia suficiente</span>
+              } @else {
+                <span class="valor">
+                  {{ fila.valor }}
+                  @if (fila.fraccion) {
+                    <span class="fraccion">({{ fila.fraccion }})</span>
+                  }
+                </span>
+              }
+            </div>
+
+            <p class="formula">{{ fila.formula }}</p>
+
+            <p class="umbrales">
+              @if (fila.umbralKill) {
+                Kill por debajo de {{ fila.umbralKill }} · Go desde {{ fila.umbralGo }}
+              } @else {
+                Go desde {{ fila.umbralGo }} · sin zona kill
+              }
+            </p>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}

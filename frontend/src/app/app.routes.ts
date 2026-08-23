@@ -97,6 +97,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/ideas/entrevistas/edicion/edicion').then((m) => m.EdicionEntrevista),
       },
+      {
+        path: 'ideas/:id/tablero',
+        loadComponent: () =>
+          import('./features/ideas/tablero/tablero/tablero').then((m) => m.TableroKpis),
+      },
+      {
+        path: 'ideas/:id/alertas',
+        loadComponent: () =>
+          import('./features/ideas/tablero/alertas/alertas').then((m) => m.AlertasKpi),
+      },
       // Guiones: dominio de primer nivel, no cuelga de ninguna idea. `nuevo` va antes
       // que `:idGuion` para que no se resuelva como un identificador.
       {
