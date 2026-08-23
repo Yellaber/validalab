@@ -202,3 +202,31 @@
   color: #6b7280;
   font-size: 0.85rem;
 }
+
+/* --- Acciones de scoring y formulario de ajuste (viven en el detalle) --- */
+
+.acciones-scoring {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.aviso-consumo-accion {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.formulario-ajuste {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #f9fafb;
+}

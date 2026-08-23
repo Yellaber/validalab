@@ -108,12 +108,28 @@ describe('EntrevistasService', () => {
     ctrl.expectOne((r) => r.method === 'DELETE' && r.url === `${BASE}/e1`).flush(null);
   });
 
-  it('no expone las acciones de scoring: son del change siguiente', () => {
-    const { svc } = setup();
-    const api = svc as unknown as Record<string, unknown>;
+  it('puntuar hace POST en la acción, sin enviar el bloque score', () => {
+    const { svc, ctrl } = setup();
+    svc.puntuar('i1', 'e1').subscribe();
 
-    expect(api['puntuar']).toBeUndefined();
-    expect(api['ajustarScore']).toBeUndefined();
+    const req = ctrl.expectOne((r) => r.method === 'POST' && r.url === `${BASE}/e1/puntuar`);
+    const cuerpo = JSON.stringify(req.request.body);
+    expect(cuerpo).not.toContain('score');
+    expect(cuerpo).not.toContain('justificacion');
+    expect(cuerpo).not.toContain('confianza');
+    req.flush(entrevista);
+  });
+
+  it('ajustarScore hace POST con solo scoreAjustado y nota', () => {
+    const { svc, ctrl } = setup();
+    svc.ajustarScore('i1', 'e1', { scoreAjustado: 6, nota: 'Sobrevaloró la urgencia' }).subscribe();
+
+    const req = ctrl.expectOne((r) => r.method === 'POST' && r.url === `${BASE}/e1/ajuste-score`);
+    expect(req.request.body).toEqual({ scoreAjustado: 6, nota: 'Sobrevaloró la urgencia' });
+    // El juicio del agente nunca viaja de vuelta: es de solo lectura.
+    expect(JSON.stringify(req.request.body)).not.toContain('justificacion');
+    expect(JSON.stringify(req.request.body)).not.toContain('senales');
+    req.flush(entrevista);
   });
 
   it('las solicitudes para httpResource apuntan a la ruta correcta', () => {

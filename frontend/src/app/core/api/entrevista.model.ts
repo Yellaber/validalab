@@ -115,6 +115,16 @@ export interface CrearEntrevistaRequest {
 }
 
 /**
+ * Ajuste humano del score. Conserva el del agente: el contrato devuelve la entrevista
+ * con su bloque `score` intacto y el `ajuste` añadido. La `nota` es obligatoria — un
+ * ajuste sin motivo es un número sin defensa.
+ */
+export interface AjustarScoreRequest {
+  scoreAjustado: number;
+  nota: string;
+}
+
+/**
  * Cambios sobre una entrevista. **No admite `contactoId` ni `guionId`**: una vez
  * registrada, la entrevista no cambia de persona ni de guión.
  *
