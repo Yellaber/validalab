@@ -46,6 +46,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # La suite e2e ejerce la aplicación completa contra PostgreSQL real, con el
+    # esquema creado por las migraciones. Sin base de datos en el runner no hay
+    # e2e posible — y esa es la razón por la que el paso nació vacío.
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: validalab
+          POSTGRES_PASSWORD: validalab
+          POSTGRES_DB: validalab
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -69,5 +86,14 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # La suite crea su propia base `validalab_test` y aplica las migraciones.
+      # Sin `--passWithNoTests`: si algún día no hay specs, este paso debe fallar,
+      # no aprobar en silencio.
       - name: E2E tests
         run: npm run test:e2e
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USERNAME: validalab
+          DB_PASSWORD: validalab
+          DB_DATABASE: validalab_test
