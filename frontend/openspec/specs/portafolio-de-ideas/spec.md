@@ -56,7 +56,7 @@ El cliente SHALL ofrecer un formulario de creación con **Signal Forms** que exi
 - **THEN** el cliente muestra el error asociado a cada campo afectado
 
 ### Requirement: Consultar el detalle de una idea propia
-El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar). El detalle MUST ofrecer además el acceso a las **hipótesis**, a los **umbrales kill/go**, a los **contactos**, a las **entrevistas**, al **tablero de KPIs** y al **veredicto** de esa idea, como puntos de entrada a la definición de su criterio de validación, al descubrimiento que la alimenta, a la lectura de conjunto de su evidencia y al juicio del agente sobre ella.
+El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar). El detalle MUST ofrecer además el acceso a las **hipótesis**, a los **umbrales kill/go**, a los **contactos**, a las **entrevistas**, al **tablero de KPIs**, al **veredicto** y al **costo estimado** de esa idea, como puntos de entrada a la definición de su criterio de validación, al descubrimiento que la alimenta, a la lectura de conjunto de su evidencia, al juicio del agente sobre ella y al costo de IA que ha consumido.
 
 #### Scenario: Detalle de idea propia
 - **WHEN** el usuario abre una idea suya
@@ -89,6 +89,10 @@ El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`,
 #### Scenario: Acceso al veredicto de la idea
 - **WHEN** el usuario ve el detalle de una idea suya
 - **THEN** dispone también del acceso al veredicto del agente sobre esa idea
+
+#### Scenario: Acceso al costo de la idea
+- **WHEN** el usuario ve el detalle de una idea suya
+- **THEN** dispone también del acceso al costo estimado de IA de esa idea
 
 ### Requirement: Editar el contenido de una idea propia
 El cliente SHALL permitir editar `titulo`, `descripcion`, `problema` y `segmentoBeachhead` de una idea propia mediante `PATCH /ideas/{id}`, reutilizando el formulario de Signal Forms con los valores actuales. El formulario NO SHALL exponer ningún control para fijar el `estado` a `go`, `pivote` o `kill`: esas transiciones provienen del veredicto aprobado (E6). Un `422 VALIDACION_FALLIDA` MUST mostrarse campo a campo; un `403 ACCESO_DENEGADO` como acceso denegado.
