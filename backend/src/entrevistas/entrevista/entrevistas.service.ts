@@ -160,6 +160,27 @@ export class EntrevistasService {
     return aEntrevistaDto(guardada);
   }
 
+  /**
+   * (Re)dispara el scoring del agente sobre una entrevista propia (RF-09b), p. ej.
+   * tras un `estadoScoring` `fallida`. A diferencia del disparo automático de
+   * `crear`/`actualizar` (asíncrono para no bloquear el HTTP), este re-disparo
+   * manual ESPERA a que el agente termine y devuelve la entrevista con su
+   * `estadoScoring` ya actualizado (`puntuada` o `fallida`). `solicitarScoring`
+   * traga sus errores —una salida que no valida tras reintentos deja la entrevista
+   * `fallida` sin romper el flujo— y omite por idempotencia si nada cambió
+   * (RF-22c). Idea ajena → 403; inexistente → 404.
+   */
+  async puntuar(
+    ownerId: string,
+    ideaId: string,
+    idEntrevista: string,
+  ): Promise<EntrevistaRespuesta> {
+    await this.ideas.asegurarPropia(ownerId, ideaId);
+    const entrevista = await this.buscarEnIdea(ideaId, idEntrevista);
+    await this.agente.solicitarScoring(ownerId, entrevista);
+    return aEntrevistaDto(await this.buscarEnIdea(ideaId, idEntrevista));
+  }
+
   /** Elimina una entrevista propia. Idea ajena → 403; inexistente → 404. */
   async eliminar(
     ownerId: string,

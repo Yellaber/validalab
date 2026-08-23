@@ -241,4 +241,35 @@ export class EntrevistasController {
   ): Promise<EntrevistaRespuesta> {
     return this.entrevistas.ajustarScore(ownerId, id, idEntrevista, dto);
   }
+
+  /** (Re)dispara el scoring del agente sobre una entrevista propia. */
+  @Post(':idEntrevista/puntuar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '(Re)disparar el scoring del agente',
+    description:
+      'Dispara o vuelve a disparar el scoring del agente sobre una entrevista propia (RF-09b), p. ej. tras un `estadoScoring` `fallida`. El bloque `score` es de solo lectura: lo produce el agente, nunca el cliente. Si la salida no valida tras reintentos, el `estadoScoring` queda `fallida`, sin romper el flujo.',
+  })
+  @ApiOkResponse({
+    description: 'Entrevista con su `estadoScoring` actualizado.',
+    type: EntrevistaRespuestaDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Falta un token válido.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'La idea pertenece a otro usuario.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'La idea o la entrevista no existe.',
+    type: ErrorRespuestaDto,
+  })
+  puntuar(
+    @OwnerId() ownerId: string,
+    @Param() { id, idEntrevista }: IdEntrevistaParamDto,
+  ): Promise<EntrevistaRespuesta> {
+    return this.entrevistas.puntuar(ownerId, id, idEntrevista);
+  }
 }
