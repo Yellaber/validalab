@@ -65,6 +65,23 @@ function pagina<T>(datos: T[]) {
   return { datos, paginacion: { pagina: 1, porPagina: 200, total: datos.length, totalPaginas: 1 } };
 }
 
+function score(): NonNullable<Entrevista['score']> {
+  return {
+    score: 8,
+    justificacion: 'Dolor confirmado y urgente',
+    senales: ['dolor_confirmado'],
+    confianza: 90,
+  };
+}
+
+function api(fixture: ComponentFixture<DetalleEntrevista>) {
+  return fixture.componentInstance as unknown as {
+    modeloAjuste: { set(v: { scoreAjustado: number; nota: string }): void };
+    onSubmitAjuste(): void;
+    refrescarManual(): void;
+  };
+}
+
 function setup(): { fixture: ComponentFixture<DetalleEntrevista>; ctrl: HttpTestingController } {
   TestBed.configureTestingModule({
     providers: [
@@ -159,28 +176,148 @@ describe('DetalleEntrevista', () => {
     expect(texto).toContain('Pagaría por esto');
   });
 
-  it('no renderiza el bloque de score ni ofrece acciones de scoring', async () => {
+  it('renderiza el bloque de score cuando la entrevista está puntuada', async () => {
     const { fixture, ctrl } = setup();
-    await cargar(
-      fixture,
-      ctrl,
-      entrevista({
-        score: {
-          score: 8,
-          justificacion: 'Dolor confirmado y urgente',
-          senales: ['dolor_confirmado'],
-          confianza: 90,
-        },
-      }),
-    );
+    await cargar(fixture, ctrl, entrevista({ score: score() }));
 
     const texto = fixture.nativeElement.textContent as string;
-    expect(texto).toContain('Puntuada');
-    // El contenido del juicio del agente es del change siguiente.
-    expect(texto).not.toContain('Dolor confirmado y urgente');
-    expect(texto).not.toContain('dolor_confirmado');
-    expect(botonPorTexto(fixture, 'Volver a puntuar')).toBeUndefined();
-    expect(botonPorTexto(fixture, 'Ajustar')).toBeUndefined();
+    expect(texto).toContain('Dolor confirmado y urgente');
+    expect(texto).toContain('dolor_confirmado');
+    expect(texto).toContain('90%');
+  });
+
+  it('sin score no renderiza el bloque ni inventa valores', async () => {
+    const { fixture, ctrl } = setup();
+    await cargar(fixture, ctrl, entrevista({ estadoScoring: 'pendiente', score: null }));
+
+    expect(fixture.nativeElement.querySelector('.bloque-score')).toBeNull();
+  });
+
+  it('un scoring fallido se explica y ofrece reintentar', async () => {
+    const { fixture, ctrl } = setup();
+    await cargar(fixture, ctrl, entrevista({ estadoScoring: 'fallida', score: null }));
+
+    expect(fixture.nativeElement.textContent).toContain('El agente no pudo puntuar');
+    expect(botonPorTexto(fixture, 'Reintentar el scoring')).toBeDefined();
+  });
+
+  it('re-puntuar envía POST y advierte del consumo del proveedor', async () => {
+    const { fixture, ctrl } = setup();
+    await cargar(fixture, ctrl, entrevista({ score: score() }));
+
+    expect(fixture.nativeElement.textContent).toContain('consume del proveedor de IA');
+
+    botonPorTexto(fixture, 'Volver a puntuar')!.click();
+    await asentar(fixture);
+
+    ctrl
+      .expectOne((r) => r.url.endsWith(`${BASE}/e1/puntuar`) && r.method === 'POST')
+      .flush(entrevista({ estadoScoring: 'procesando', score: null }));
+    await asentar(fixture);
+  });
+
+  describe('ajuste del score', () => {
+    it('registra el ajuste con score y nota, sin enviar el bloque del agente', async () => {
+      const { fixture, ctrl } = setup();
+      await cargar(fixture, ctrl, entrevista({ score: score() }));
+
+      botonPorTexto(fixture, 'Ajustar el score')!.click();
+      await asentar(fixture);
+
+      api(fixture).modeloAjuste.set({ scoreAjustado: 6, nota: 'Sobrevaloró la urgencia' });
+      await asentar(fixture);
+      api(fixture).onSubmitAjuste();
+      await asentar(fixture);
+
+      const req = ctrl.expectOne(
+        (r) => r.url.endsWith(`${BASE}/e1/ajuste-score`) && r.method === 'POST',
+      );
+      expect(req.request.body).toEqual({ scoreAjustado: 6, nota: 'Sobrevaloró la urgencia' });
+      expect(JSON.stringify(req.request.body)).not.toContain('justificacion');
+      req.flush(
+        entrevista({
+          score: score(),
+          ajuste: { scoreAjustado: 6, nota: 'Sobrevaloró la urgencia', fechaAjuste: 'x' },
+        }),
+      );
+      await asentar(fixture);
+    });
+
+    it('sin nota la confirmación queda bloqueada y no se envía nada', async () => {
+      const { fixture, ctrl } = setup();
+      await cargar(fixture, ctrl, entrevista({ score: score() }));
+
+      botonPorTexto(fixture, 'Ajustar el score')!.click();
+      await asentar(fixture);
+      api(fixture).modeloAjuste.set({ scoreAjustado: 6, nota: '   ' });
+      await asentar(fixture);
+
+      expect(botonPorTexto(fixture, 'Registrar ajuste')!.disabled).toBe(true);
+
+      api(fixture).onSubmitAjuste();
+      await asentar(fixture);
+      ctrl.expectNone((r) => r.url.endsWith('/ajuste-score'));
+    });
+
+    it('un score fuera de rango bloquea el envío', async () => {
+      const { fixture, ctrl } = setup();
+      await cargar(fixture, ctrl, entrevista({ score: score() }));
+
+      botonPorTexto(fixture, 'Ajustar el score')!.click();
+      await asentar(fixture);
+      api(fixture).modeloAjuste.set({ scoreAjustado: 12, nota: 'Motivo' });
+      await asentar(fixture);
+
+      expect(botonPorTexto(fixture, 'Registrar ajuste')!.disabled).toBe(true);
+
+      api(fixture).onSubmitAjuste();
+      await asentar(fixture);
+      ctrl.expectNone((r) => r.url.endsWith('/ajuste-score'));
+    });
+
+    it('un 422 se reparte campo a campo', async () => {
+      const { fixture, ctrl } = setup();
+      await cargar(fixture, ctrl, entrevista({ score: score() }));
+
+      botonPorTexto(fixture, 'Ajustar el score')!.click();
+      await asentar(fixture);
+      api(fixture).modeloAjuste.set({ scoreAjustado: 6, nota: 'Motivo' });
+      await asentar(fixture);
+      api(fixture).onSubmitAjuste();
+      await asentar(fixture);
+
+      ctrl
+        .expectOne((r) => r.url.endsWith('/ajuste-score'))
+        .flush(
+          {
+            codigo: 'VALIDACION_FALLIDA',
+            mensaje: 'inválido',
+            detalles: [{ campo: 'nota', problema: 'Nota demasiado corta' }],
+          },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      await asentar(fixture);
+
+      expect(fixture.nativeElement.textContent).toContain('Nota demasiado corta');
+    });
+
+    it('tras ajustar se ven ambos valores y la justificación del agente sigue ahí', async () => {
+      const { fixture, ctrl } = setup();
+      await cargar(
+        fixture,
+        ctrl,
+        entrevista({
+          score: score(),
+          ajuste: { scoreAjustado: 6, nota: 'Sobrevaloró la urgencia', fechaAjuste: 'x' },
+        }),
+      );
+
+      const texto = fixture.nativeElement.textContent as string;
+      expect(texto).toContain('Score del agente');
+      expect(texto).toContain('Tu ajuste');
+      expect(texto).toContain('En los KPIs cuenta tu ajuste');
+      expect(texto).toContain('Dolor confirmado y urgente');
+    });
   });
 
   it('el borrado confirmado hace DELETE y vuelve al listado', async () => {

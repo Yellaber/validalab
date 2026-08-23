@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   ActualizarEntrevistaRequest,
+  AjustarScoreRequest,
   CrearEntrevistaRequest,
   Entrevista,
   EstadoScoring,
@@ -99,5 +100,28 @@ export class EntrevistasService {
    */
   eliminar(ideaId: string, idEntrevista: string): Observable<void> {
     return this.http.delete<void>(`${this.base(ideaId)}/${idEntrevista}`);
+  }
+
+  /**
+   * `POST .../{idEntrevista}/puntuar` — (re)dispara el scoring del agente. Sin cuerpo:
+   * el bloque `score` lo produce el agente, nunca el cliente.
+   *
+   * Es idempotente por hash de respuestas y versión de rúbrica (RF-22c): re-puntuar
+   * una entrevista intacta no vuelve a invocar al agente.
+   */
+  puntuar(ideaId: string, idEntrevista: string): Observable<Entrevista> {
+    return this.http.post<Entrevista>(`${this.base(ideaId)}/${idEntrevista}/puntuar`, {});
+  }
+
+  /**
+   * `POST .../{idEntrevista}/ajuste-score` — registra el ajuste humano **conservando
+   * ambos valores**. El ajuste es el que prevalece en el cálculo de los KPIs (E5).
+   */
+  ajustarScore(
+    ideaId: string,
+    idEntrevista: string,
+    datos: AjustarScoreRequest,
+  ): Observable<Entrevista> {
+    return this.http.post<Entrevista>(`${this.base(ideaId)}/${idEntrevista}/ajuste-score`, datos);
   }
 }
