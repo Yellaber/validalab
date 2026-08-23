@@ -87,6 +87,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/ideas/entrevistas/alta/alta').then((m) => m.AltaEntrevista),
       },
+      // `reevaluacion` va antes que `:idEntrevista` para que no se resuelva como id.
+      {
+        path: 'ideas/:id/entrevistas/reevaluacion',
+        loadComponent: () =>
+          import('./features/ideas/entrevistas/reevaluacion/reevaluacion').then(
+            (m) => m.ReevaluacionLote,
+          ),
+      },
       {
         path: 'ideas/:id/entrevistas/:idEntrevista',
         loadComponent: () =>
