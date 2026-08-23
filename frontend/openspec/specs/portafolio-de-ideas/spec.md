@@ -56,7 +56,7 @@ El cliente SHALL ofrecer un formulario de creación con **Signal Forms** que exi
 - **THEN** el cliente muestra el error asociado a cada campo afectado
 
 ### Requirement: Consultar el detalle de una idea propia
-El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar). El detalle MUST ofrecer además el acceso a las **hipótesis**, a los **umbrales kill/go**, a los **contactos** y a las **entrevistas** de esa idea, como puntos de entrada a la definición de su criterio de validación y al descubrimiento que la alimenta.
+El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`, mostrando `titulo`, `descripcion`, `problema`, `segmentoBeachhead` y `estado`. Un `403 ACCESO_DENEGADO` (idea ajena) MUST mostrarse como acceso denegado sin revelar datos; un `404 RECURSO_NO_ENCONTRADO` MUST mostrarse como idea inexistente. Desde el detalle el cliente MUST ofrecer las acciones disponibles según el `estado` (editar, archivar o desarchivar). El detalle MUST ofrecer además el acceso a las **hipótesis**, a los **umbrales kill/go**, a los **contactos**, a las **entrevistas** y al **tablero de KPIs** de esa idea, como puntos de entrada a la definición de su criterio de validación, al descubrimiento que la alimenta y a la lectura de conjunto de su evidencia.
 
 #### Scenario: Detalle de idea propia
 - **WHEN** el usuario abre una idea suya
@@ -81,6 +81,10 @@ El cliente SHALL presentar el detalle de una idea consumiendo `GET /ideas/{id}`,
 #### Scenario: Acceso a las entrevistas de la idea
 - **WHEN** el usuario ve el detalle de una idea suya
 - **THEN** dispone también del acceso a las entrevistas de esa idea
+
+#### Scenario: Acceso al tablero de KPIs de la idea
+- **WHEN** el usuario ve el detalle de una idea suya
+- **THEN** dispone también del acceso al tablero de KPIs de esa idea
 
 ### Requirement: Editar el contenido de una idea propia
 El cliente SHALL permitir editar `titulo`, `descripcion`, `problema` y `segmentoBeachhead` de una idea propia mediante `PATCH /ideas/{id}`, reutilizando el formulario de Signal Forms con los valores actuales. El formulario NO SHALL exponer ningún control para fijar el `estado` a `go`, `pivote` o `kill`: esas transiciones provienen del veredicto aprobado (E6). Un `422 VALIDACION_FALLIDA` MUST mostrarse campo a campo; un `403 ACCESO_DENEGADO` como acceso denegado.
