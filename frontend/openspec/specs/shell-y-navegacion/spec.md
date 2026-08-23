@@ -22,7 +22,7 @@ El cliente SHALL impedir que un usuario con sesión válida permanezca en `/logi
 - **THEN** el cliente lo redirige a la pantalla de inicio del shell
 
 ### Requirement: Shell autenticado con identidad y cierre de sesión
-El cliente SHALL presentar, para el usuario autenticado, un shell con un `<router-outlet>` para las rutas de dominio, que muestre la identidad del usuario en sesión (al menos su `nombre` o `email`) y ofrezca la acción de cerrar sesión. La ruta por defecto del shell SHALL renderizar el **listado del portafolio de ideas** (no un marcador de posición). El shell SHALL alojar las rutas hijas protegidas del dominio `ideas` (listado, alta, detalle, edición, **hipótesis de una idea**, **umbrales de una idea**, **contactos de una idea**, **detalle de un contacto**, las cuatro de **entrevistas de una idea** —listado, alta, detalle y edición—, las dos de **KPIs de una idea** —tablero y alertas— y las dos de **veredicto de una idea** —historial y detalle de un veredicto—) con carga diferida, de modo que sus chunks no se carguen para un usuario sin sesión. El shell SHALL alojar además, con la misma carga diferida, las rutas hijas protegidas de los dominios de primer nivel **`guiones`** (listado, alta, detalle y edición) y **`configuracion`** (configuración BYOK del proveedor de IA), que **no** cuelgan de ninguna idea.
+El cliente SHALL presentar, para el usuario autenticado, un shell con un `<router-outlet>` para las rutas de dominio, que muestre la identidad del usuario en sesión (al menos su `nombre` o `email`) y ofrezca la acción de cerrar sesión. La ruta por defecto del shell SHALL renderizar el **listado del portafolio de ideas** (no un marcador de posición). El shell SHALL alojar las rutas hijas protegidas del dominio `ideas` (listado, alta, detalle, edición, **hipótesis de una idea**, **umbrales de una idea**, **contactos de una idea**, **detalle de un contacto**, las cuatro de **entrevistas de una idea** —listado, alta, detalle y edición—, las dos de **KPIs de una idea** —tablero y alertas—, las dos de **veredicto de una idea** —historial y detalle de un veredicto— y el **costo de una idea**) con carga diferida, de modo que sus chunks no se carguen para un usuario sin sesión. El shell SHALL alojar además, con la misma carga diferida, las rutas hijas protegidas de los dominios de primer nivel **`guiones`** (listado, alta, detalle y edición), **`configuracion`** (configuración BYOK del proveedor de IA) y **`costo`** (costo estimado total del usuario), que **no** cuelgan de ninguna idea.
 
 #### Scenario: El shell muestra la identidad y permite cerrar sesión
 - **WHEN** el usuario autenticado está en el shell
@@ -65,8 +65,12 @@ El cliente SHALL presentar, para el usuario autenticado, un shell con un `<route
 - **WHEN** el usuario autenticado navega a la configuración del proveedor de IA
 - **THEN** el cliente activa la ruta hija dentro del shell cargando su chunk de forma diferida
 
+#### Scenario: Las rutas de costo cuelgan del shell
+- **WHEN** el usuario autenticado navega al costo total del usuario o al costo de una idea
+- **THEN** el cliente activa la ruta hija correspondiente dentro del shell cargando su chunk de forma diferida
+
 ### Requirement: Navegación entre los dominios de primer nivel
-El shell SHALL ofrecer al usuario autenticado una navegación explícita entre los dominios de primer nivel de la aplicación: **Ideas**, **Guiones** y **Proveedor de IA** (configuración BYOK). La navegación SHALL señalar cuál está activo. El destino de `Ideas` SHALL señalarse como activo también cuando el usuario esté en una ruta anidada de una idea (detalle, hipótesis, umbrales, contactos, **entrevistas**, **tablero y alertas** y **veredicto**), de modo que el resaltado no desaparezca al profundizar en el dominio.
+El shell SHALL ofrecer al usuario autenticado una navegación explícita entre los dominios de primer nivel de la aplicación: **Ideas**, **Guiones**, **Proveedor de IA** (configuración BYOK) y **Costo**. La navegación SHALL señalar cuál está activo. El destino de `Ideas` SHALL señalarse como activo también cuando el usuario esté en una ruta anidada de una idea (detalle, hipótesis, umbrales, contactos, **entrevistas**, **tablero y alertas**, **veredicto** y **costo**), de modo que el resaltado no desaparezca al profundizar en el dominio.
 
 #### Scenario: Navegar entre dominios
 - **WHEN** el usuario autenticado está en el portafolio de ideas y usa la navegación hacia `Guiones`
@@ -79,6 +83,10 @@ El shell SHALL ofrecer al usuario autenticado una navegación explícita entre l
 #### Scenario: Navegar a la configuración del proveedor de IA
 - **WHEN** el usuario autenticado usa la navegación hacia `Proveedor de IA`
 - **THEN** el cliente activa la configuración BYOK dentro del shell y la señala como destino activo
+
+#### Scenario: Navegar al costo total
+- **WHEN** el usuario autenticado usa la navegación hacia `Costo`
+- **THEN** el cliente activa el costo total del usuario dentro del shell y lo señala como destino activo
 
 #### Scenario: El resaltado sobrevive a las rutas anidadas
 - **WHEN** el usuario autenticado está en los contactos de una idea
@@ -94,5 +102,9 @@ El shell SHALL ofrecer al usuario autenticado una navegación explícita entre l
 
 #### Scenario: El resaltado sobrevive al veredicto de una idea
 - **WHEN** el usuario autenticado está en el veredicto de una idea
+- **THEN** la navegación sigue señalando `Ideas` como destino activo
+
+#### Scenario: El resaltado sobrevive al costo de una idea
+- **WHEN** el usuario autenticado está en el costo de una idea
 - **THEN** la navegación sigue señalando `Ideas` como destino activo
 
