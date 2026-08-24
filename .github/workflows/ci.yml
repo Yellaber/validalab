@@ -56,6 +56,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Antes de `Build` porque un fallo de lint es el más barato de diagnosticar.
+      # `ng lint` no lleva `--fix`: en el runner una corrección se perdería y el
+      # build pasaría con código distinto del que se revisó.
+      - name: Lint
+        run: npm run lint
+
       - name: Build
         run: npm run build
 
