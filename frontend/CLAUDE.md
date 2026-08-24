@@ -24,6 +24,7 @@ Ejecutar desde `frontend/`:
 npm start            # ng serve — servidor de desarrollo en http://localhost:4200
 npm run build        # ng build — salida a dist/ (optimizado para producción por defecto)
 npm run watch        # ng build --watch --configuration development
+npm run lint         # ng lint — angular-eslint sobre .ts y plantillas .html (sin --fix)
 npm test             # ng test — Vitest (vía @angular/build:unit-test), en modo watch por defecto en terminal interactiva (TTY)
 ```
 
@@ -38,7 +39,9 @@ npm test -- --coverage                      # genera reporte de cobertura
 
 O enfoca en el código con `describe.only` / `it.only` de Vitest (y `.skip` para excluir; recuerda revertirlo antes de hacer commit). El entorno es **jsdom** y los globals (`describe`, `it`, `expect`) los habilita el builder, así que no hace falta importarlos. Los tests son *zoneless*: usa el patrón **Act–Wait–Assert** con `await fixture.whenStable()` en lugar de `fixture.detectChanges()` (ver la skill `angular-developer` → testing). Este paquete no tiene framework e2e configurado; la cobertura extremo a extremo del sistema vive en `backend/test/`.
 
-Este paquete no tiene script `lint` ni configuración de ESLint — solo Prettier (configurado en línea en `package.json`: 100 columnas, comillas simples, parser HTML de Angular). El paquete `backend/` es donde vive `npm run lint`.
+El paquete se verifica con **`angular-eslint`** (`npm run lint`), que linta tanto el TypeScript como las **plantillas HTML**, incluidas reglas de **accesibilidad** que ninguna otra herramienta del repositorio comprueba. La configuración vive en `eslint.config.js` y la genera y migra el schematic oficial: mantenla con `ng update`, no la edites a mano salvo para reglas propias del proyecto. El script **no lleva `--fix`**, a propósito: en el CI una corrección silenciosa se perdería y el build pasaría con código distinto del que se revisó.
+
+El formato es cosa aparte y lo aplica Prettier (configurado en línea en `package.json`: 100 columnas, comillas simples, parser HTML de Angular).
 
 ## Arquitectura
 

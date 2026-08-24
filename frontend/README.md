@@ -18,6 +18,7 @@ ve una API key en crudo ni ejecuta el agente.
 npm start            # ng serve — http://localhost:4200
 npm run build        # build de producción a dist/
 npm run watch        # build incremental en modo desarrollo
+npm run lint         # angular-eslint sobre TypeScript y plantillas
 npm test             # Vitest sobre jsdom; en terminal interactiva arranca en modo watch
 ```
 
@@ -30,9 +31,12 @@ npm test -- --filter='^App'                 # por patrón de nombre
 npm test -- --coverage                      # con cobertura
 ```
 
-Este paquete no tiene ESLint ni framework e2e propios: el linting del monorepo vive en `backend/`,
-y la cobertura extremo a extremo del sistema, en `backend/test/`. El formato lo aplica Prettier,
-configurado en línea en `package.json`.
+`npm run lint` usa **angular-eslint**, que revisa el TypeScript y también las plantillas HTML,
+incluidas reglas de accesibilidad. No aplica correcciones automáticas: comprueba. El formato es
+cosa aparte y lo aplica Prettier, configurado en línea en `package.json`.
+
+Este paquete no tiene framework e2e propio: la cobertura extremo a extremo del sistema vive en
+`backend/test/`.
 
 ## Dónde seguir
 
