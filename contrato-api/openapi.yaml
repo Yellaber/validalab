@@ -2246,8 +2246,7 @@ components:
           type: number
           description: Valor a partir del cual (`≥`) el KPI entra en zona GO.
         umbralKill:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: Valor por debajo del cual (`<`) el KPI entra en zona KILL; `null` si el KPI no tiene zona kill.
     ActualizarUmbralRequest:
       type: object
@@ -2257,8 +2256,7 @@ components:
         umbralGo:
           type: number
         umbralKill:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: Omitir o `null` si el KPI no tiene zona kill. No puede ser mayor que `umbralGo`.
     UmbralesIdea:
       type: array
@@ -2327,9 +2325,8 @@ components:
         origen:
           $ref: '#/components/schemas/OrigenContacto'
         referidoPorId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
           description: Contacto de la misma idea que refirió a esta persona; `null` si no es referido (HU-10).
         estado:
           allOf:
@@ -2337,15 +2334,13 @@ components:
           readOnly: true
           description: Posición en el embudo; se cambia con la acción de transición, no por edición de contenido.
         primerToqueEn:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
           readOnly: true
           description: Fecha del primer toque de outreach; `null` si aún no se ha contactado.
         segundoToqueEn:
-          type: string
+          type: [string, 'null']
           format: date-time
-          nullable: true
           readOnly: true
           description: Fecha del segundo toque (único follow-up); `null` si no se ha hecho.
         notas:
@@ -2375,9 +2370,8 @@ components:
         origen:
           $ref: '#/components/schemas/OrigenContacto'
         referidoPorId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
           description: Contacto de la misma idea que refirió a esta persona (cuando `origen` es `referido`).
     ActualizarContactoRequest:
       type: object
@@ -2397,9 +2391,8 @@ components:
         origen:
           $ref: '#/components/schemas/OrigenContacto'
         referidoPorId:
-          type: string
+          type: [string, 'null']
           format: uuid
-          nullable: true
         notas:
           type: string
     TransicionEstadoRequest:
@@ -2688,14 +2681,14 @@ components:
         estadoScoring:
           $ref: '#/components/schemas/EstadoScoring'
         score:
-          allOf:
+          oneOf:
             - $ref: '#/components/schemas/ScoreEntrevista'
-          nullable: true
+            - type: 'null'
           description: Resultado del agente; `null` mientras el scoring está `pendiente` o `fallida`.
         ajuste:
-          allOf:
+          oneOf:
             - $ref: '#/components/schemas/AjusteScore'
-          nullable: true
+            - type: 'null'
           description: Ajuste humano del score; `null` si el usuario no lo ha ajustado.
         fechaCreacion:
           type: string
@@ -2802,23 +2795,19 @@ components:
             - $ref: '#/components/schemas/UnidadKpi'
           readOnly: true
         valor:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: Valor calculado del KPI; `null` cuando no hay evidencia suficiente (denominador cero).
         numerador:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: Numerador de la fórmula, para transparencia; `null` en KPIs de conteo.
         denominador:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: Denominador de la fórmula, para transparencia; `null` en KPIs de conteo.
         umbralGo:
           type: number
           description: Umbral GO vigente de la idea para este KPI.
         umbralKill:
-          type: number
-          nullable: true
+          type: [number, 'null']
           description: Umbral KILL vigente; `null` en los KPIs sin zona kill.
         zona:
           $ref: '#/components/schemas/ZonaKpi'
@@ -3003,9 +2992,9 @@ components:
         estadoVerificacion:
           $ref: '#/components/schemas/EstadoVeredicto'
         verificacion:
-          allOf:
+          oneOf:
             - $ref: '#/components/schemas/VerificacionVeredicto'
-          nullable: true
+            - type: 'null'
           description: Verificación humana; `null` mientras el veredicto está `pendiente`.
         fechaEmision:
           type: string
@@ -3160,9 +3149,9 @@ components:
           readOnly: true
           description: Idea a la que pertenece; derivado del path, nunca aceptado como entrada.
         proveedor:
-          allOf:
+          oneOf:
             - $ref: '#/components/schemas/ProveedorId'
-          nullable: true
+            - type: 'null'
           description: Proveedor con el que se generó el consumo; `null` si aún no hay consumo o BYOK.
         moneda:
           $ref: '#/components/schemas/Moneda'
@@ -3192,9 +3181,8 @@ components:
             Texto normativo (SRS §8.9.1): es un estimado calculado localmente del consumo vía ValidaLab,
             no el saldo de la cuenta; el saldo solo es visible en el panel del proveedor.
         urlFacturacion:
-          type: string
+          type: [string, 'null']
           format: uri
-          nullable: true
           description: Enlace al panel de facturación del proveedor para recargar saldo (RF-22g, HU-31).
         fechaCalculo:
           type: string
@@ -3233,9 +3221,9 @@ components:
           items:
             $ref: '#/components/schemas/CostoIdeaResumen'
         proveedor:
-          allOf:
+          oneOf:
             - $ref: '#/components/schemas/ProveedorId'
-          nullable: true
+            - type: 'null'
           description: Proveedor BYOK configurado; `null` si aún no hay configuración.
         tokensEntrada:
           type: integer
@@ -3250,9 +3238,8 @@ components:
           type: string
           description: Texto normativo (SRS §8.9.1); ver `CostoIdea.aclaracion`.
         urlFacturacion:
-          type: string
+          type: [string, 'null']
           format: uri
-          nullable: true
           description: Enlace al panel de facturación del proveedor para recargar saldo (RF-22g, HU-31).
         fechaCalculo:
           type: string
@@ -3278,9 +3265,8 @@ components:
           minimum: 0
           description: Precio por millón de tokens de salida.
         precioEntradaCacheadaPorMillon:
-          type: number
+          type: [number, 'null']
           minimum: 0
-          nullable: true
           description: |
             Precio por millón de tokens de entrada cacheada, cuando el proveedor ofrece prompt caching
             (RF-22d); `null` si no aplica.
@@ -3303,8 +3289,7 @@ components:
           minimum: 0
           description: Entrevistas cuya entrada cambió y que serían re-puntuadas.
         modeloScoring:
-          type: string
-          nullable: true
+          type: [string, 'null']
           description: Modelo de scoring configurado con que se haría la re-evaluación; `null` si no hay BYOK.
         moneda:
           $ref: '#/components/schemas/Moneda'
