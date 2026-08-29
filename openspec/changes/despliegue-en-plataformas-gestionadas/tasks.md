@@ -1,0 +1,84 @@
+## 1. Cookie de sesión parametrizada
+
+- [ ] 1.1 Añadir `COOKIE_SAMESITE` al esquema Zod del entorno (`backend/src/config/env.schema.ts`): `enum(['strict','lax','none'])` con `.default('strict')`
+- [ ] 1.2 Añadir la validación cruzada al objeto del esquema: `COOKIE_SAMESITE=none` con `COOKIE_SECURE=false` aborta el arranque, con un mensaje que nombre **las dos** variables
+- [ ] 1.3 Exponerla en `AppConfigService` ampliando el getter `cookie` a `{ secure, sameSite }`, para no abrir una vía de lectura nueva
+- [ ] 1.4 Parametrizar `opcionesCookieRefresh` y `opcionesLimpiezaCookieRefresh` (`backend/src/usuarios/sesion/cookie-sesion.ts`): `sameSite` pasa a ser argumento, como ya lo es `secure`
+- [ ] 1.5 Actualizar las tres llamadas de `usuarios.controller.ts` (líneas ~73 y ~190) para pasar `this.config.cookie.sameSite`
+- [ ] 1.6 Actualizar `cookie-sesion.spec.ts`: cubrir que emisión y limpieza devuelven el `sameSite` recibido, y que **coinciden** entre sí
+- [ ] 1.7 Añadir una prueba de la validación cruzada sobre `validateEnv`: combinación incoherente → lanza; `strict` + `secure:false` → válida
+- [ ] 1.8 Corregir los comentarios de `cookie-sesion.ts`, que afirman `SameSite=Strict` como invariante
+
+## 2. SSL hacia la base de datos
+
+- [ ] 2.1 Añadir `DB_SSL` al esquema del entorno: booleana por transformación de `'true'|'false'`, con `.default('false')`
+- [ ] 2.2 Exponerla en el getter `database` de `AppConfigService`
+- [ ] 2.3 Ampliar `DatabaseConnectionConfig` y `buildDataSourceOptions` (`backend/src/database/typeorm-options.ts`) para añadir `ssl` solo cuando la opción está activa
+- [ ] 2.4 Propagarla en `data-source.ts`, para que la CLI de migraciones vea la misma configuración que la aplicación
+- [ ] 2.5 Prueba unitaria de `buildDataSourceOptions`: con la opción desactivada las opciones no llevan `ssl`; con ella activada, sí
+- [ ] 2.6 Comprobar que el arranque local contra `docker-compose.yml` sigue funcionando sin tocar el `.env` existente
+
+## 3. Migraciones desde el artefacto compilado
+
+- [ ] 3.1 Añadir a `backend/package.json` un script de migraciones contra `dist/database/data-source.js` usando el binario `typeorm` (dependencia de producción), **sin** `ts-node`
+- [ ] 3.2 Conservar intactos los scripts actuales orientados a desarrollo
+- [ ] 3.3 Verificar el script tras `npm run build` con `--omit=dev` en un árbol limpio: si arrastra `ts-node` o `typescript`, no sirve para la imagen
+
+## 4. Imagen del backend
+
+- [ ] 4.1 `backend/Dockerfile` multi-etapa sobre Node 24 (la versión que fija el CI): etapa de build con `npm ci` completo, etapa final con `npm ci --omit=dev` y el `dist/` copiado
+- [ ] 4.2 Ejecutar como usuario sin privilegios; no fijar `PORT` en la imagen (`AppConfigService` ya lo lee del entorno)
+- [ ] 4.3 `CMD` que arranca la aplicación y **nada más**: sin migraciones en el arranque
+- [ ] 4.4 `backend/.dockerignore` que excluya `node_modules`, `dist`, `.env`, `test` y artefactos de cobertura
+- [ ] 4.5 Construir y arrancar la imagen en local contra el PostgreSQL de `docker compose`, para validarla antes de tocar la plataforma
+- [ ] 4.6 Comprobar en la imagen final que no están el compilador de TypeScript ni el resto del utillaje de desarrollo
+
+## 5. Frontend
+
+- [ ] 5.1 `frontend/src/environments/environment.ts`: `baseUrl` pasa del prefijo `/api` al origen absoluto del backend en Railway
+- [ ] 5.2 Actualizar el comentario del archivo, que hoy explica el supuesto del proxy inverso
+- [ ] 5.3 `frontend/vercel.json` con `outputDirectory: dist/frontend/browser` y la reescritura de rutas de cliente hacia `index.html`
+- [ ] 5.4 Comprobar que `environment.development.ts` no cambia y `npm start` sigue apuntando a `http://localhost:3000`
+- [ ] 5.5 `npm run build` y verificar que la salida cae donde `vercel.json` la busca
+
+## 6. Puesta en marcha en las plataformas
+
+> Este bloque toca servicios externos y credenciales reales. Se ejecuta manualmente y en este orden: el frontend necesita la URL del backend para compilarse, y el backend la del frontend para su CORS.
+
+- [ ] 6.1 **Supabase**: crear el proyecto y anotar las dos cadenas de conexión, la del pooler y la directa
+- [ ] 6.2 **Railway**: crear el servicio desde el `Dockerfile`, plan Hobby
+- [ ] 6.3 Fijar en Railway las variables: `NODE_ENV=production`, `DB_*` (pooler) con `DB_SSL=true`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`, `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO`, `BOOTSTRAP_TOKEN` y un `CORS_ORIGINS` provisional
+- [ ] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando a la **conexión directa**, no al pooler
+- [ ] 6.5 Desplegar y verificar que arranca y que el esquema quedó aplicado
+- [ ] 6.6 **Vercel**: importar el repositorio con raíz en `frontend/` y desplegar; anotar la URL de producción
+- [ ] 6.7 Volver a Railway y fijar `CORS_ORIGINS` con la URL real de Vercel; redesplegar
+- [ ] 6.8 Inicializar el sistema con `POST /sistema/inicializar` y el `BOOTSTRAP_TOKEN` contra la URL pública
+- [ ] 6.9 Promover un segundo administrador con `PATCH /usuarios/{id}/rol`, como advierte el `README`: la inicialización no tiene reversa
+- [ ] 6.10 Retirar `BOOTSTRAP_TOKEN` del entorno de Railway una vez inicializado
+
+## 7. Verificación de extremo a extremo en el despliegue
+
+- [ ] 7.1 Registrar una cuenta desde la aplicación desplegada e iniciar sesión
+- [ ] 7.2 **La prueba que justifica el change**: dejar la sesión abierta más allá del TTL del `accessToken` (15 min) y comprobar que `POST /usuarios/refresh` recibe la cookie y la sesión sobrevive
+- [ ] 7.3 Comprobar en el navegador que la `Set-Cookie` llega con `SameSite=None; Secure; HttpOnly; Path=/usuarios`
+- [ ] 7.4 Cerrar sesión y comprobar que la cookie **desaparece** del navegador, no solo que la respuesta es `204`
+- [ ] 7.5 Recargar una ruta profunda (p. ej. el detalle de una idea) y comprobar que no devuelve 404
+- [ ] 7.6 Recorrer el camino crítico: crear idea → hipótesis y umbrales → contacto → entrevista → scoring → KPIs → veredicto
+- [ ] 7.7 Configurar BYOK con una API key real y comprobar que la validación contra el proveedor funciona desde Railway
+
+## 8. Documentación
+
+- [ ] 8.1 Documentar `COOKIE_SAMESITE` y `DB_SSL` en `backend/.env.example`, con el mismo tono de las existentes: qué valor va en cada entorno y por qué
+- [ ] 8.2 Añadir al `README` la sección de despliegue: las tres plataformas, la tabla de variables por plataforma, el orden del bloque 6 y la inicialización contra la URL pública
+- [ ] 8.3 Documentar en el `README` los límites conocidos: los previews de Vercel no autentican, y el proyecto gratuito de Supabase se pausa por inactividad
+- [ ] 8.4 Corregir las tres menciones de `SameSite=Strict` en `contrato-api/openapi.yaml` (líneas ~115, ~131 y ~1689) para describir el atributo como dependiente del despliegue
+- [ ] 8.5 Corregir `backend/openspec/specs/autenticacion-de-sesion/spec.md`: el texto del requisito de login y el escenario «Credenciales válidas» afirman `SameSite=Strict` como invariante
+- [ ] 8.6 Revisar si `frontend/CLAUDE.md` o `backend/CLAUDE.md` afirman algo que este change invalide
+
+## 9. Cierre
+
+- [ ] 9.1 `npm run lint`, `npm test` y `npm run test:e2e` en `backend/` sin regresiones
+- [ ] 9.2 `npm run lint`, `npm test` y `npm run build` en `frontend/` sin regresiones
+- [ ] 9.3 Validar el contrato con el job de CI que ya lo comprueba, tras la corrección de 8.4
+- [ ] 9.4 Revisar el diff completo: ninguna URL de despliegue debe traer credenciales, y `.env` no puede aparecer
+- [ ] 9.5 `openspec validate --strict` sobre el change

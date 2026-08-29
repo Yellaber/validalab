@@ -28,13 +28,15 @@ El objetivo de este change es que el proyecto exista en una URL pública.
 - `despliegue-en-plataformas-gestionadas`: la aplicación es desplegable en plataformas gestionadas —frontend estático, backend en contenedor y PostgreSQL gestionado— con la configuración que eso exige parametrizada por entorno y no fijada en código: atributos de la cookie de sesión según la topología, SSL hacia la base de datos, y origen del backend conocido por el cliente.
 
 ### Modified Capabilities
-<!-- Ninguna. `arranque-plataforma` no cambia: añadir variables al esquema del entorno no altera su requisito de validación fail-fast, que ya cubre cualquier variable declarada. `autenticacion-de-sesion` tampoco: la cookie sigue siendo `HttpOnly`, acotada por `Path` y con la misma vigencia; lo que pasa a depender del entorno es un atributo que hoy está fijado en código. -->
+<!-- Ninguna vía delta. `arranque-plataforma` no cambia: añadir variables al esquema del entorno no altera su requisito de validación fail-fast, que ya cubre cualquier variable declarada.
+
+`autenticacion-de-sesion` sí queda desactualizada en su REDACCIÓN: su requisito de login y uno de sus escenarios afirman `SameSite=Strict` como invariante, y tras este change el atributo depende de la topología. El comportamiento no cambia —la cookie sigue siendo `HttpOnly`, acotada por `Path` y con la misma vigencia—, solo deja de estar fijado en código. Es una capacidad de `backend/` y este es un change de la raíz, así que el mecanismo de deltas no la alcanza: se corrige en su sitio, como tarea de este change (ver D11 en el diseño). -->
 
 ## Impact
 
-- **`backend/`**: `env.schema.ts` y `app-config.service.ts` ganan dos variables; `cookie-sesion.ts` deja de fijar `sameSite`; `typeorm-options.ts` gana SSL; `Dockerfile` y `.dockerignore` nuevos; `.env.example` documenta ambas.
+- **`backend/`**: `env.schema.ts` y `app-config.service.ts` ganan dos variables y una validación cruzada; `cookie-sesion.ts` deja de fijar `sameSite`; `typeorm-options.ts` y `data-source.ts` ganan SSL; `package.json` gana un script de migraciones contra el compilado (el de desarrollo usa `ts-node`, que no está en la imagen); `Dockerfile` y `.dockerignore` nuevos; `.env.example` documenta ambas variables.
 - **`frontend/`**: `environment.ts` apunta al backend desplegado; `vercel.json` nuevo.
-- **`README.md`**: sección de despliegue.
+- **`README.md`**: sección de despliegue, con el orden de los pasos y los límites conocidos.
 - **Seguridad**: `SameSite=None` reduce la mitigación de CSRF sobre `refresh` y `logout`, los **únicos** endpoints autenticados por cookie. Todos los que modifican estado usan `Authorization: Bearer` y son inmunes a CSRF por construcción. El detalle y las alternativas descartadas están en el diseño.
-- **Contrato**: **no se toca**. Ningún endpoint, esquema ni código de error cambia.
+- **Contrato**: **ningún endpoint, esquema ni código de error cambia**, y un cliente escrito contra el contrato actual sigue funcionando. Sí se corrige su *redacción*: tres párrafos describen la cookie como `SameSite=Strict` invariante, y pasan a describir el atributo como dependiente del despliegue. Los atributos de una cookie `HttpOnly` no son interfaz programática —el cliente nunca los lee—; el contrato los documenta como información de despliegue.
 - **Coste de operación**: frontend y base de datos en plan gratuito; el backend en un plan de pago mínimo, elegido para evitar los arranques en frío de los planes gratuitos.
