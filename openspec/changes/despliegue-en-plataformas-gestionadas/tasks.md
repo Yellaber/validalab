@@ -35,8 +35,8 @@
 
 ## 5. Frontend
 
-- [ ] 5.1 `frontend/src/environments/environment.ts`: `baseUrl` pasa del prefijo `/api` al origen absoluto del backend en Railway
-- [ ] 5.2 Actualizar el comentario del archivo, que hoy explica el supuesto del proxy inverso
+- [x] 5.1 `frontend/src/environments/environment.ts`: `baseUrl` pasa del prefijo `/api` al origen absoluto del backend en Railway
+- [x] 5.2 Actualizar el comentario del archivo, que hoy explica el supuesto del proxy inverso
 - [x] 5.3 `frontend/vercel.json` con `outputDirectory: dist/frontend/browser` y la reescritura de rutas de cliente hacia `index.html`
 - [x] 5.4 Comprobar que `environment.development.ts` no cambia y `npm start` sigue apuntando a `http://localhost:3000`
 - [x] 5.5 `npm run build` y verificar que la salida cae donde `vercel.json` la busca
@@ -51,9 +51,9 @@
 - [x] 6.1d Desactivar la Data API de Supabase en el panel: es la medida que cubre también las tablas que creen migraciones futuras
 - [x] 6.1e Fijar el RLS como migración de TypeORM, para que un entorno nuevo lo reproduzca sin pasos manuales
 - [ ] 6.2 **Railway**: crear el servicio desde el `Dockerfile`, plan Hobby
-- [ ] 6.3 Fijar en Railway las variables: `NODE_ENV=production`, `DB_*` (pooler) con `DB_SSL=true`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`, `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO`, `BOOTSTRAP_TOKEN` y un `CORS_ORIGINS` provisional
+- [x] 6.3 Fijar en Railway las variables: `NODE_ENV=production`, `DB_*` (pooler) con `DB_SSL=true`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`, `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO`, `BOOTSTRAP_TOKEN` y un `CORS_ORIGINS` provisional
 - [ ] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando al **pooler en modo sesión** (puerto `5432`), no al de modo transacción
-- [ ] 6.5 Desplegar y verificar que arranca y que el esquema quedó aplicado
+- [x] 6.5 Desplegar y verificar que arranca y que el esquema quedó aplicado
 - [ ] 6.6 **Vercel**: importar el repositorio con raíz en `frontend/` y desplegar; anotar la URL de producción
 - [ ] 6.7 Volver a Railway y fijar `CORS_ORIGINS` con la URL real de Vercel; redesplegar
 - [ ] 6.8 Inicializar el sistema con `POST /sistema/inicializar` y el `BOOTSTRAP_TOKEN` contra la URL pública
