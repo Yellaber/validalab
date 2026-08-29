@@ -128,3 +128,22 @@ La documentación SHALL declarar además los límites conocidos del despliegue: 
 - **WHEN** se consulta la descripción de la cookie de sesión en el contrato de API y en las especificaciones
 - **THEN** describen `SameSite` como dependiente de la topología del despliegue, con `strict` por defecto
 - **AND** no lo presentan como un valor invariante
+
+### Requirement: Las tablas quedan protegidas frente a un acceso que rodee al backend
+El aislamiento multi-tenant vive en el backend, que filtra por `owner_id` en cada consulta. Un PostgreSQL gestionado que publique el esquema por su propia API de datos abre una vía que no pasa por el backend y por tanto **no** pasa por ese filtro.
+
+El esquema SHALL tener Row Level Security activo en todas sus tablas, y esa activación SHALL formar parte de las migraciones, no de la configuración manual del proveedor: un entorno nuevo debe reproducirla sin pasos fuera del repositorio.
+
+No SHALL definirse políticas: sin ellas RLS deniega por defecto, que es el comportamiento buscado, porque ningún rol distinto de la aplicación debe leer estas tablas. Tampoco SHALL usarse `FORCE ROW LEVEL SECURITY`, del que depende que la aplicación —dueña de las tablas— siga operando sin políticas.
+
+#### Scenario: Acceso por la API de datos del proveedor
+- **WHEN** se consulta una tabla con filas a través de la API de datos del proveedor, con su clave publicable
+- **THEN** no se obtiene ninguna fila
+
+#### Scenario: La aplicación no se ve afectada
+- **WHEN** la aplicación opera contra un esquema con RLS activo, conectada como dueña de las tablas
+- **THEN** lee y escribe con normalidad, sin políticas definidas
+
+#### Scenario: Reproducibilidad en un entorno nuevo
+- **WHEN** se aplica el juego completo de migraciones sobre una base de datos vacía
+- **THEN** todas las tablas quedan con RLS activo, sin intervención manual

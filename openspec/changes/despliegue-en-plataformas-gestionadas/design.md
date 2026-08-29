@@ -75,7 +75,7 @@ La opción cifra el transporte pero **no verifica la cadena de certificación**.
 
 La opción se cablea en `buildDataSourceOptions`, que es el único constructor de opciones y lo comparten la aplicación (`DatabaseModule`) y la CLI de migraciones (`data-source.ts`). Así ambas ven la misma configuración, que es exactamente por lo que esa función existe.
 
-Un detalle verificado que conviene no volver a equivocar: **`node-postgres` no usa prepared statements con nombre por defecto**, así que el pooler de Supabase en modo transacción funciona sin configuración especial. Aun así, las migraciones se ejecutan contra la **conexión directa** y no contra el pooler: son DDL en una transacción larga, el caso para el que el modo transacción no está pensado.
+Un detalle verificado que conviene no volver a equivocar: **`node-postgres` no usa prepared statements con nombre por defecto**, así que el pooler de Supabase en modo transacción funciona sin configuración especial. Aun así, las migraciones no se ejecutan contra el pooler en **modo transacción**, sino contra el mismo pooler en **modo sesión** (puerto `5432`): son DDL en una transacción larga, el caso para el que el modo transacción no está pensado. Se descartó la conexión **directa**, que era la opción inicial, al comprobar que `db.<ref>.supabase.co` resuelve solo a IPv6 en el plan gratuito: haría depender el paso de release de que la red de salida de Railway hable IPv6. El pooler expone IPv4 y sirve para ambos modos.
 
 ### D6 — Las migraciones son un paso de release, y se ejecutan desde el compilado
 

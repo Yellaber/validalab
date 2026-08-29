@@ -45,10 +45,14 @@
 
 > Este bloque toca servicios externos y credenciales reales. Se ejecuta manualmente y en este orden: el frontend necesita la URL del backend para compilarse, y el backend la del frontend para su CORS.
 
-- [ ] 6.1 **Supabase**: crear el proyecto y anotar las dos cadenas de conexión, la del pooler y la directa
+- [x] 6.1 **Supabase**: crear el proyecto y anotar las dos cadenas de conexión, la del pooler en modo transacción y la del pooler en modo sesión
+- [x] 6.1b Aplicar las migraciones contra Supabase por el pooler en modo sesión, verificando de paso `DB_SSL=true` contra un PostgreSQL gestionado real
+- [x] 6.1c **Blindar la Data API**: activar RLS en las 17 tablas de `public`, que sin él quedan legibles y escribibles con la clave publicable de Supabase, rodeando el aislamiento por `owner_id`
+- [x] 6.1d Desactivar la Data API de Supabase en el panel: es la medida que cubre también las tablas que creen migraciones futuras
+- [x] 6.1e Fijar el RLS como migración de TypeORM, para que un entorno nuevo lo reproduzca sin pasos manuales
 - [ ] 6.2 **Railway**: crear el servicio desde el `Dockerfile`, plan Hobby
 - [ ] 6.3 Fijar en Railway las variables: `NODE_ENV=production`, `DB_*` (pooler) con `DB_SSL=true`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`, `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO`, `BOOTSTRAP_TOKEN` y un `CORS_ORIGINS` provisional
-- [ ] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando a la **conexión directa**, no al pooler
+- [ ] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando al **pooler en modo sesión** (puerto `5432`), no al de modo transacción
 - [ ] 6.5 Desplegar y verificar que arranca y que el esquema quedó aplicado
 - [ ] 6.6 **Vercel**: importar el repositorio con raíz en `frontend/` y desplegar; anotar la URL de producción
 - [ ] 6.7 Volver a Railway y fijar `CORS_ORIGINS` con la URL real de Vercel; redesplegar

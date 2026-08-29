@@ -171,7 +171,7 @@ el proceso. Estas son las que cambian respecto al desarrollo local; el resto se 
 | Variable                              | Valor en el despliegue        | Nota                                                                     |
 | ------------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
 | `NODE_ENV`                            | `production`                  |                                                                          |
-| `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_DATABASE` | cadena del **pooler** de Supabase | La app usa el pooler; las migraciones, la conexión directa (ver abajo). |
+| `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_DATABASE` | cadena del **pooler** de Supabase | La app usa el pooler en modo transacción; las migraciones, el de modo sesión (ver abajo). |
 | `DB_SSL`                              | `true`                        | Supabase lo exige; sin él el backend no arranca.                         |
 | `DB_SYNCHRONIZE`                      | `false`                       | El esquema lo gobiernan las migraciones.                                 |
 | `COOKIE_SECURE`                       | `true`                        | Obligatorio con `SameSite=None`.                                         |
@@ -194,9 +194,14 @@ El orden importa y no es deducible: **el frontend necesita la URL del backend pa
 backend necesita la URL del frontend para su CORS**. Como no se pueden satisfacer a la vez, se pasa
 dos veces por Railway.
 
-1. **Supabase** — crea el proyecto. Anota las **dos** cadenas de conexión: la del *pooler* (para la
-   aplicación) y la **directa** (para las migraciones: son DDL en una transacción larga, que no es
-   para lo que está pensado el modo transacción del pooler).
+1. **Supabase** — crea el proyecto. Anota las **dos** cadenas de conexión del *pooler*, que se
+   diferencian solo en el puerto: la de **modo transacción** (`6543`, para la aplicación) y la de
+   **modo sesión** (`5432`, para las migraciones: son DDL en una transacción larga, que no es para
+   lo que está pensado el modo transacción).
+
+   No uses la conexión **directa** (`db.<ref>.supabase.co`) para las migraciones aunque el panel la
+   ofrezca: en el plan gratuito resuelve **solo a IPv6**, y si la red de salida de la plataforma que
+   ejecuta el paso de release no habla IPv6, el despliegue falla al conectar. El pooler tiene IPv4.
 2. **Railway** — crea el servicio desde `backend/Dockerfile`. Fija las variables de la tabla, con un
    `CORS_ORIGINS` provisional. Configura como comando de *pre-deploy*:
 
@@ -204,7 +209,8 @@ dos veces por Railway.
    npm run migration:run:prod
    ```
 
-   apuntando a la **conexión directa**. Las migraciones son un paso de release y no del arranque:
+   apuntando al **pooler en modo sesión** (puerto `5432`). Las migraciones son un paso de release
+   y no del arranque:
    con varias réplicas, todas las intentarían a la vez.
 3. **Frontend** — pon la URL pública del backend en `frontend/src/environments/environment.ts`
    (`baseUrl`) y haz commit.
@@ -232,6 +238,23 @@ Son decisiones tomadas, no defectos pendientes:
   lista blanca fija que la cubra. Aceptar un comodín sobre `*.vercel.app` significaría admitir
   credenciales desde cualquier despliegue de cualquier cuenta de Vercel, así que se prefiere que un
   preview sirva para revisar la interfaz pero no para probar con sesión.
+- **La Data API de Supabase exige blindaje explícito.** Supabase publica el esquema `public` por
+  PostgREST, así que sin protección `usuarios` y `configuraciones_byok` son legibles y escribibles
+  con la clave publicable, **rodeando el filtro por `owner_id`** que vive en el backend. Una
+  migración activa RLS en todas las tablas —para que un entorno nuevo lo reproduzca sin pasos
+  manuales—: sin políticas, RLS deniega por defecto, y la aplicación no se entera porque se conecta
+  como dueña de las tablas y no se usa `FORCE ROW LEVEL SECURITY`. Además se **desactiva la Data
+  API** en el panel (*Project Settings → Data API*): ValidaLab no la usa —el frontend habla con el
+  backend, nunca con Supabase— y es lo único que cubre también las tablas que creen migraciones
+  futuras, que nacerían sin RLS.
+
+  Comprobarlo tiene trampa, dos veces. Con la Data API **activa** y RLS denegando, PostgREST
+  responde `200` con `[]`, no `403`: sobre una tabla vacía eso es indistinguible de que no haya
+  protección, así que hay que consultar una tabla **con filas**, como `modelos_ia`, y ver que el
+  rol anónimo recibe cero. Con la Data API **desactivada**, la respuesta es `503` con el código
+  `PGRST002` —que literalmente dice que PostgREST no puede consultar la base de datos—, así que
+  antes de darlo por bueno hay que confirmar que la base sigue sana por la ruta de la aplicación:
+  si no, se estaría leyendo una caída de la base como si fuera un blindaje.
 - **El proyecto gratuito de Supabase se pausa por inactividad.** Si el enlace lleva tiempo sin
   visitas, conviene abrirlo antes de compartirlo. Despausar es un clic y, a diferencia del arranque
   en frío del backend, no ocurre a mitad de una visita.
