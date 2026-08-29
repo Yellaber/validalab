@@ -50,7 +50,7 @@
 - [x] 6.1c **Blindar la Data API**: activar RLS en las 17 tablas de `public`, que sin él quedan legibles y escribibles con la clave publicable de Supabase, rodeando el aislamiento por `owner_id`
 - [x] 6.1d Desactivar la Data API de Supabase en el panel: es la medida que cubre también las tablas que creen migraciones futuras
 - [x] 6.1e Fijar el RLS como migración de TypeORM, para que un entorno nuevo lo reproduzca sin pasos manuales
-- [ ] 6.2 **Railway**: crear el servicio desde el `Dockerfile`, plan Hobby
+- [x] 6.2 **Railway**: crear el servicio desde el `Dockerfile`, plan Hobby
 - [x] 6.3 Fijar en Railway las variables: `NODE_ENV=production`, `DB_*` (pooler) con `DB_SSL=true`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`, `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO`, `BOOTSTRAP_TOKEN` y un `CORS_ORIGINS` provisional
 - [ ] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando al **pooler en modo sesión** (puerto `5432`), no al de modo transacción
 - [x] 6.5 Desplegar y verificar que arranca y que el esquema quedó aplicado

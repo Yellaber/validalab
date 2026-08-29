@@ -202,8 +202,27 @@ dos veces por Railway.
    No uses la conexión **directa** (`db.<ref>.supabase.co`) para las migraciones aunque el panel la
    ofrezca: en el plan gratuito resuelve **solo a IPv6**, y si la red de salida de la plataforma que
    ejecuta el paso de release no habla IPv6, el despliegue falla al conectar. El pooler tiene IPv4.
-2. **Railway** — crea el servicio desde `backend/Dockerfile`. Fija las variables de la tabla, con un
-   `CORS_ORIGINS` provisional. Configura como comando de *pre-deploy*:
+2. **Railway** — crea el servicio desde el repositorio y configúralo **en el panel**, porque el
+   archivo `railway.json` está deprecado (lo sustituye `.railway/railway.ts`, que este proyecto no
+   usa):
+
+   | Ajuste | Valor |
+   | ------ | ----- |
+   | *Settings → Source → Branch* | la rama que contiene los artefactos de despliegue |
+   | *Settings → Source → Root Directory* | `backend` |
+   | *Settings → Build → Builder* | `Dockerfile` |
+   | *Settings → Deploy → Pre-deploy Command* | ver abajo |
+
+   > [!WARNING]
+   > **La rama es el ajuste que más caro sale equivocar.** Railway se engancha por defecto a la rama
+   > principal, y mientras el despliegue viva en una rama de trabajo el `Dockerfile` sencillamente no
+   > existe ahí: Railway cae a su detector automático, construye el proyecto igual y **arranca sin
+   > error**. El síntoma no es un fallo, es un despliegue aparentemente sano que no lleva dentro
+   > ninguna de las variables ni de la configuración que creías haber puesto. Se reconoce en el log
+   > de arranque: la imagen de este `Dockerfile` corre como `[Nest] 1` —Node es el PID 1— mientras
+   > que el detector automático deja `npm → nest → node` y un PID mayor.
+
+   Fija las variables de la tabla, con un `CORS_ORIGINS` provisional, y como comando de *pre-deploy*:
 
    ```bash
    npm run migration:run:prod
