@@ -72,6 +72,7 @@ export class UsuariosController {
       sesion.refreshToken,
       opcionesCookieRefresh({
         secure: this.config.cookie.secure,
+        sameSite: this.config.cookie.sameSite,
         maxAgeMs: this.config.session.refreshTtlMs,
       }),
     );
@@ -187,7 +188,10 @@ export class UsuariosController {
     }
     res.clearCookie(
       NOMBRE_COOKIE_REFRESH,
-      opcionesLimpiezaCookieRefresh({ secure: this.config.cookie.secure }),
+      opcionesLimpiezaCookieRefresh({
+        secure: this.config.cookie.secure,
+        sameSite: this.config.cookie.sameSite,
+      }),
     );
   }
 

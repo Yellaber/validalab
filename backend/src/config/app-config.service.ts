@@ -33,6 +33,7 @@ export class AppConfigService {
     password: string;
     database: string;
     synchronize: boolean;
+    ssl: boolean;
   } {
     return {
       host: this.config.get('DB_HOST', { infer: true }),
@@ -41,6 +42,7 @@ export class AppConfigService {
       password: this.config.get('DB_PASSWORD', { infer: true }),
       database: this.config.get('DB_DATABASE', { infer: true }),
       synchronize: this.config.get('DB_SYNCHRONIZE', { infer: true }),
+      ssl: this.config.get('DB_SSL', { infer: true }),
     };
   }
 
@@ -60,9 +62,17 @@ export class AppConfigService {
     return { refreshTokenTtl, refreshTtlMs: parsearTtlMs(refreshTokenTtl) };
   }
 
-  /** Atributos de seguridad de la cookie de refresh. */
-  get cookie(): { secure: boolean } {
-    return { secure: this.config.get('COOKIE_SECURE', { infer: true }) };
+  /**
+   * Atributos de la cookie de refresh que dependen del entorno. `sameSite` está
+   * aquí y no fijado en código porque su valor correcto depende de si el
+   * frontend y el backend comparten sitio registrable, y eso lo determina el
+   * despliegue.
+   */
+  get cookie(): { secure: boolean; sameSite: Env['COOKIE_SAMESITE'] } {
+    return {
+      secure: this.config.get('COOKIE_SECURE', { infer: true }),
+      sameSite: this.config.get('COOKIE_SAMESITE', { infer: true }),
+    };
   }
 
   /** Orígenes permitidos por CORS (con credenciales). Lista no vacía. */

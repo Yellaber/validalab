@@ -31,7 +31,7 @@ function crear(): {
     logout: jest.fn().mockResolvedValue(undefined),
   };
   const config = {
-    cookie: { secure: true },
+    cookie: { secure: true, sameSite: 'strict' },
     session: { refreshTtlMs: REFRESH_TTL_MS },
   } as AppConfigService;
   const controlador = new UsuariosController(

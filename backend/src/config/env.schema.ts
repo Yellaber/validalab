@@ -28,6 +28,16 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // Conexión TLS a PostgreSQL. Los proveedores gestionados la exigen; el
+  // PostgreSQL de `docker-compose.yml` no la ofrece, así que el valor por
+  // defecto es el que hace funcionar un `npm run start:dev` recién clonado el
+  // repositorio. Cifra el transporte pero NO verifica la cadena de
+  // certificación: eso exigiría distribuir y rotar el certificado raíz del
+  // proveedor, y queda fuera de alcance.
+  DB_SSL: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   // --- JWT (firma y verificación del accessToken) ---
   JWT_ACCESS_SECRET: z.string().min(1),
@@ -44,6 +54,14 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((v) => v === 'true'),
+  // Atributo `SameSite` de la cookie de refresh. Depende de la TOPOLOGÍA del
+  // despliegue, no del código: si el frontend y el backend comparten sitio
+  // registrable, `strict` protege frente a CSRF; si están en sitios distintos
+  // (p. ej. `*.vercel.app` y `*.up.railway.app`), el navegador no adjuntaría la
+  // cookie a `/usuarios/refresh` y la sesión se caería al expirar el accessToken.
+  // Por eso lo dice el entorno. `strict` por defecto: el desarrollo local va
+  // sobre el mismo sitio y es el valor más restrictivo.
+  COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
   // Orígenes permitidos por CORS (separados por coma). Con credenciales (la cookie
   // de refresh) el origen NO puede ser `*`: debe listarse explícitamente.
   CORS_ORIGINS: z.string().min(1).default('http://localhost:4200'),
@@ -95,6 +113,32 @@ export const envSchema = z.object({
   SCORING_VERSION_RUBRICA: z.string().min(1).default('v2'),
 });
 
+/**
+ * Reglas que ninguna variable puede comprobar por su cuenta, porque relacionan
+ * dos. Se validan sobre el objeto ya parseado, así que aquí los valores llegan
+ * con su tipo final.
+ *
+ * Hoy solo hay una: una cookie `SameSite=None` EXIGE `Secure`, y el navegador
+ * descarta en silencio la que llegue sin él. Sin esta comprobación, el error de
+ * configuración no se manifiesta al arrancar sino como una sesión que se cae
+ * sola cuando expira el accessToken —el síntoma más caro de diagnosticar del
+ * despliegue—. Fallar aquí lo convierte en un arranque que no ocurre y dice por
+ * qué.
+ */
+export const envSchemaValidado = envSchema.superRefine((env, ctx) => {
+  if (env.COOKIE_SAMESITE === 'none' && !env.COOKIE_SECURE) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['COOKIE_SAMESITE'],
+      message:
+        'COOKIE_SAMESITE=none exige COOKIE_SECURE=true: el navegador descarta ' +
+        'una cookie `SameSite=None` sin `Secure`. Usa `none` solo en un ' +
+        'despliegue por HTTPS; para desarrollo local sobre http, deja ' +
+        'COOKIE_SAMESITE=strict.',
+    });
+  }
+});
+
 /** Configuración del entorno ya validada y con tipos derivados. */
 export type Env = z.infer<typeof envSchema>;
 
@@ -104,7 +148,7 @@ export type Env = z.infer<typeof envSchema>;
  * campo para que el operador sepa exactamente qué variable corregir.
  */
 export function validateEnv(config: Record<string, unknown>): Env {
-  const resultado = envSchema.safeParse(config);
+  const resultado = envSchemaValidado.safeParse(config);
 
   if (!resultado.success) {
     const detalle = resultado.error.issues

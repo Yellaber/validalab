@@ -1,0 +1,39 @@
+# Lo que NO debe entrar en el contexto de build de la imagen del backend.
+#
+# Además de acelerar el build, esto es una barrera de seguridad: `.env` lleva
+# secretos reales (JWT, clave de cifrado BYOK, credenciales de BD) y no puede
+# acabar en una capa de la imagen.
+
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+
+# Dependencias y artefactos: la imagen los reconstruye desde cero
+node_modules
+dist
+coverage
+*.tsbuildinfo
+
+# Pruebas y utillaje que no participan del build de producción
+test
+**/*.spec.ts
+**/*.e2e-spec.ts
+eslint.config.mjs
+.prettierrc
+
+# Documentación y metadatos del repositorio
+openspec
+.claude
+CLAUDE.md
+README.md
+docker-compose.yml
+Dockerfile
+.dockerignore
+.git
+.gitignore
+
+# Ruido del sistema
+npm-debug.log*
+.DS_Store
+Thumbs.db

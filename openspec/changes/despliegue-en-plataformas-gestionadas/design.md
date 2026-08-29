@@ -103,6 +103,10 @@ La salida sería aceptar un patrón en vez de una lista, y no se hace: `enableCo
 
 `Dockerfile` en `backend/` con dos etapas: una compila con `npm ci` completo, la otra parte de una imagen mínima con `npm ci --omit=dev` y el `dist/` copiado. Corre como usuario sin privilegios y escucha en el `PORT` del entorno —que `AppConfigService` ya lee y Railway ya inyecta—, sin fijarlo en el `Dockerfile`.
 
+**`--omit=dev` no basta**, cosa que solo se supo construyendo la imagen y mirando dentro. `typeorm` declara `ts-node` como peer dependency **opcional**; npm la resuelve en el lockfile y `npm ci` la instala, arrastrando `typescript` con ella. Ni `--omit=dev` ni `--omit=peer` la quitan. Se borra explícitamente tras el install: son ~25 MB y, sobre todo, un compilador que no pinta nada en una imagen de producción. Es seguro porque `ts-node` solo hace falta para cargar un DataSource escrito en `.ts`, y aquí siempre se carga el compilado (D6).
+
+Vale la pena anotarlo porque es contraintuitivo: la intuición dice que `dependencies` menos `devDependencies` es lo que queda, y las peer dependencies opcionales de una dependencia de producción se cuelan por fuera de esa cuenta.
+
 El frontend no se empaqueta en contenedor: es un artefacto estático y Vercel lo compila y lo sirve. Solo necesita un `vercel.json` que diga dos cosas que ninguna autodetección acierta: que la salida está en `dist/frontend/browser`, y que las rutas de cliente deben reescribirse a `index.html` para que recargar `/ideas/<id>` no devuelva un 404.
 
 ### D10 — El orden de despliegue se documenta porque no es deducible

@@ -29,7 +29,10 @@ npm run migration:show          # lista aplicadas y pendientes
 npm run migration:generate -- src/database/migrations/<Nombre>   # genera a partir del diff de entidades
 npm run migration:create -- src/database/migrations/<Nombre>     # crea una vacía
 npm run migration:revert        # revierte la última aplicada
+npm run migration:run:prod      # aplica pendientes desde dist/ (paso de release; no usa ts-node)
 ```
+
+`migration:run:prod` existe porque el resto de comandos de migración invocan `typeorm-ts-node-commonjs`, y ni `ts-node` ni `typescript` viajan a la imagen de producción. Ese comando ataca el artefacto compilado (`dist/database/data-source.js`) con el binario de `typeorm`, que sí es dependencia de producción. Es el que ejecuta la plataforma como paso previo al despliegue; en desarrollo usa `migration:run`.
 
 Tests (Jest + ts-jest):
 

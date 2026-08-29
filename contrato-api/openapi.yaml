@@ -112,8 +112,8 @@ paths:
       summary: Autenticarse y obtener la sesión
       description: |
         Endpoint público. Devuelve el `accessToken` en el cuerpo y entrega el `refreshToken` en
-        una cookie `HttpOnly; Secure; SameSite=Strict` (ver `refreshCookie`). El cuerpo NO incluye
-        el refresh token.
+        una cookie `HttpOnly; Secure` con `SameSite` según la topología del despliegue (ver
+        `refreshCookie`). El cuerpo NO incluye el refresh token.
       operationId: iniciarSesion
       security: []
       requestBody:
@@ -128,8 +128,8 @@ paths:
           headers:
             Set-Cookie:
               description: |
-                Cookie `refreshToken=<opaco>; HttpOnly; Secure; SameSite=Strict; Path=/usuarios;
-                Max-Age=<TTL>`. El navegador la reenvía a `refresh` y `logout`.
+                Cookie `refreshToken=<opaco>; HttpOnly; Secure; SameSite=<según despliegue>;
+                Path=/usuarios; Max-Age=<TTL>`. El navegador la reenvía a `refresh` y `logout`.
               schema:
                 type: string
           content:
@@ -1686,10 +1686,15 @@ components:
       in: cookie
       name: refreshToken
       description: |
-        Refresh token opaco transportado en una cookie `HttpOnly; Secure; SameSite=Strict` con
-        `Path` acotado a las rutas de sesión. El navegador la envía automáticamente a
-        `/usuarios/refresh` y `/usuarios/logout`; el JavaScript del cliente NUNCA la lee ni la
-        escribe. La emite `login`, la rota `refresh` y la limpia `logout`.
+        Refresh token opaco transportado en una cookie `HttpOnly; Secure` con `Path` acotado a las
+        rutas de sesión. El navegador la envía automáticamente a `/usuarios/refresh` y
+        `/usuarios/logout`; el JavaScript del cliente NUNCA la lee ni la escribe. La emite `login`,
+        la rota `refresh` y la limpia `logout`.
+
+        El atributo `SameSite` lo fija el despliegue, no el contrato: `Strict` cuando el cliente y
+        la API comparten sitio registrable, `None` cuando están en sitios distintos —y entonces
+        `Secure` es obligatorio—. No es parte de la interfaz programática: el cliente nunca lee los
+        atributos de una cookie `HttpOnly`, solo necesita enviar sus peticiones con credenciales.
     bootstrapToken:
       type: apiKey
       in: header

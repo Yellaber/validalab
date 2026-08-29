@@ -19,5 +19,6 @@ export default new DataSource(
     password: env.DB_PASSWORD,
     database: env.DB_DATABASE,
     synchronize: env.DB_SYNCHRONIZE,
+    ssl: env.DB_SSL,
   }),
 );

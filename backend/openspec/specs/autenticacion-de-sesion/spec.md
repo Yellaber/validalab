@@ -4,13 +4,13 @@
 TBD - created by archiving change usuarios-auth. Update Purpose after archive.
 ## Requirements
 ### Requirement: Inicio de sesión y emisión de tokens
-El sistema SHALL autenticar con `email` y `password` mediante un endpoint público y, si las credenciales son válidas y la cuenta está `activo`, SHALL devolver un `TokenRespuesta` con `accessToken` (JWT con claims `sub` = id del usuario y `rol`), `tokenTipo` `Bearer`, `expiraEn` en segundos y el `Usuario`. El `refreshToken` NO SHALL incluirse en el cuerpo: SHALL entregarse en una cookie `HttpOnly; Secure; SameSite=Strict` con `Path` acotado a las rutas de sesión. Las credenciales inválidas NO SHALL revelar si falló el email o la contraseña.
+El sistema SHALL autenticar con `email` y `password` mediante un endpoint público y, si las credenciales son válidas y la cuenta está `activo`, SHALL devolver un `TokenRespuesta` con `accessToken` (JWT con claims `sub` = id del usuario y `rol`), `tokenTipo` `Bearer`, `expiraEn` en segundos y el `Usuario`. El `refreshToken` NO SHALL incluirse en el cuerpo: SHALL entregarse en una cookie `HttpOnly; Secure` con `Path` acotado a las rutas de sesión y `SameSite` **según la topología del despliegue** (`Strict` por defecto; ver la capacidad `despliegue-en-plataformas-gestionadas`). Las credenciales inválidas NO SHALL revelar si falló el email o la contraseña.
 
 #### Scenario: Credenciales válidas
 - **WHEN** se hace login con email y contraseña correctos de una cuenta activa
 - **THEN** la respuesta es `200` con `accessToken`, `tokenTipo: "Bearer"`, `expiraEn` y el `Usuario`
 - **AND** el cuerpo NO contiene `refreshToken`
-- **AND** la respuesta incluye una cabecera `Set-Cookie` con el refresh token marcado `HttpOnly`, `Secure` (según configuración) y `SameSite=Strict`
+- **AND** la respuesta incluye una cabecera `Set-Cookie` con el refresh token marcado `HttpOnly`, y con `Secure` y `SameSite` según configuración
 - **AND** el `accessToken` es aceptado por el guard de autenticación en peticiones protegidas
 
 #### Scenario: Credenciales inválidas

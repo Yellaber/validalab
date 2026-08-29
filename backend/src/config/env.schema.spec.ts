@@ -86,4 +86,67 @@ describe('validateEnv', () => {
       ).toThrow(/BOOTSTRAP_TOKEN/);
     });
   });
+
+  describe('DB_SSL', () => {
+    it('queda desactivado por defecto: el PostgreSQL local no habla TLS', () => {
+      expect(validateEnv(entornoValido).DB_SSL).toBe(false);
+    });
+
+    it('transforma "true" a booleano', () => {
+      expect(validateEnv({ ...entornoValido, DB_SSL: 'true' }).DB_SSL).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('COOKIE_SAMESITE', () => {
+    it('vale strict por defecto', () => {
+      expect(validateEnv(entornoValido).COOKIE_SAMESITE).toBe('strict');
+    });
+
+    it('acepta none cuando la cookie es Secure', () => {
+      const env = validateEnv({
+        ...entornoValido,
+        COOKIE_SAMESITE: 'none',
+        COOKIE_SECURE: 'true',
+      });
+
+      expect(env.COOKIE_SAMESITE).toBe('none');
+      expect(env.COOKIE_SECURE).toBe(true);
+    });
+
+    it('rechaza un valor fuera del conjunto permitido', () => {
+      expect(() =>
+        validateEnv({ ...entornoValido, COOKIE_SAMESITE: 'Strict' }),
+      ).toThrow(/COOKIE_SAMESITE/);
+    });
+
+    // Sin esta comprobación el fallo no aparece al arrancar, sino como una
+    // sesión que se cae sola cuando expira el accessToken: el navegador
+    // descarta en silencio una cookie `SameSite=None` que no sea `Secure`.
+    it('aborta si se combina none con COOKIE_SECURE=false, nombrando ambas', () => {
+      const incoherente = {
+        ...entornoValido,
+        COOKIE_SAMESITE: 'none',
+        COOKIE_SECURE: 'false',
+      };
+
+      expect(() => validateEnv(incoherente)).toThrow(
+        /Configuración de entorno inválida/,
+      );
+      expect(() => validateEnv(incoherente)).toThrow(/COOKIE_SAMESITE/);
+      expect(() => validateEnv(incoherente)).toThrow(/COOKIE_SECURE/);
+    });
+
+    it('admite strict con COOKIE_SECURE=false: es el desarrollo local sobre http', () => {
+      const env = validateEnv({
+        ...entornoValido,
+        COOKIE_SAMESITE: 'strict',
+        COOKIE_SECURE: 'false',
+      });
+
+      expect(env.COOKIE_SAMESITE).toBe('strict');
+      expect(env.COOKIE_SECURE).toBe(false);
+    });
+  });
 });

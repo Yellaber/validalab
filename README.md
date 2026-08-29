@@ -152,6 +152,98 @@ entorno.
 
 ---
 
+## Despliegue
+
+ValidaLab se despliega en tres plataformas gestionadas, una por pieza:
+
+| Pieza          | Plataforma            | Plan     | Por qué                                                                                |
+| -------------- | --------------------- | -------- | -------------------------------------------------------------------------------------- |
+| Frontend       | **Vercel**            | Gratuito | Artefacto estático; el plan gratuito no lo duerme.                                       |
+| Backend        | **Railway**           | Hobby    | De pago **a propósito**: los planes gratuitos duermen y un arranque en frío de 30–50 s cae en la primera visita. |
+| Base de datos  | **Supabase**          | Gratuito | PostgreSQL gestionado con TLS.                                                           |
+
+### Variables de entorno
+
+El backend valida su entorno al arrancar (*fail-fast*): una variable ausente o incoherente aborta
+el proceso. Estas son las que cambian respecto al desarrollo local; el resto se documentan en
+`backend/.env.example`.
+
+| Variable                              | Valor en el despliegue        | Nota                                                                     |
+| ------------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| `NODE_ENV`                            | `production`                  |                                                                          |
+| `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_DATABASE` | cadena del **pooler** de Supabase | La app usa el pooler; las migraciones, la conexión directa (ver abajo). |
+| `DB_SSL`                              | `true`                        | Supabase lo exige; sin él el backend no arranca.                         |
+| `DB_SYNCHRONIZE`                      | `false`                       | El esquema lo gobiernan las migraciones.                                 |
+| `COOKIE_SECURE`                       | `true`                        | Obligatorio con `SameSite=None`.                                         |
+| `COOKIE_SAMESITE`                     | `none`                        | Frontend y backend están en sitios registrables distintos.               |
+| `CORS_ORIGINS`                        | URL de producción de Vercel   | Con credenciales el origen no puede ser `*`.                             |
+| `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO` | secretos nuevos           | `openssl rand -hex 32`. **No reutilices los de desarrollo.**              |
+| `BOOTSTRAP_TOKEN`                     | secreto temporal              | Solo hasta inicializar; después se retira.                               |
+
+> [!IMPORTANT]
+> `COOKIE_SAMESITE=none` **exige** `COOKIE_SECURE=true`, y el backend aborta el arranque si se
+> combinan mal. El navegador descarta en silencio una cookie `SameSite=None` sin `Secure`, y el
+> síntoma sería una sesión que se cae sola al expirar el `accessToken` —quince minutos después de
+> entrar—, no un error visible. La validación convierte eso en un arranque que falla y dice por qué.
+
+`PORT` lo inyecta Railway y el backend lo lee del entorno: no lo fijes.
+
+### Orden de los pasos
+
+El orden importa y no es deducible: **el frontend necesita la URL del backend para compilarse, y el
+backend necesita la URL del frontend para su CORS**. Como no se pueden satisfacer a la vez, se pasa
+dos veces por Railway.
+
+1. **Supabase** — crea el proyecto. Anota las **dos** cadenas de conexión: la del *pooler* (para la
+   aplicación) y la **directa** (para las migraciones: son DDL en una transacción larga, que no es
+   para lo que está pensado el modo transacción del pooler).
+2. **Railway** — crea el servicio desde `backend/Dockerfile`. Fija las variables de la tabla, con un
+   `CORS_ORIGINS` provisional. Configura como comando de *pre-deploy*:
+
+   ```bash
+   npm run migration:run:prod
+   ```
+
+   apuntando a la **conexión directa**. Las migraciones son un paso de release y no del arranque:
+   con varias réplicas, todas las intentarían a la vez.
+3. **Frontend** — pon la URL pública del backend en `frontend/src/environments/environment.ts`
+   (`baseUrl`) y haz commit.
+4. **Vercel** — importa el repositorio con **`frontend/` como directorio raíz**. `vercel.json` ya
+   declara el directorio de salida (`dist/frontend/browser`) y las reescrituras que la SPA necesita
+   para que recargar una ruta profunda no devuelva 404. Anota la URL de producción.
+5. **Railway, otra vez** — fija `CORS_ORIGINS` con la URL real de Vercel y redespliega.
+6. **Inicializa el sistema** contra la URL pública, igual que en local:
+
+   ```bash
+   curl -X POST https://<tu-backend>/sistema/inicializar \
+     -H "Content-Type: application/json" \
+     -H "X-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
+     -d '{"email":"admin@ejemplo.com","nombre":"Admin","password":"tu-contrasena"}'
+   ```
+
+   Después, **promueve un segundo administrador** con `PATCH /usuarios/{id}/rol` y retira
+   `BOOTSTRAP_TOKEN` del entorno. La inicialización no tiene reversa.
+
+### Límites conocidos
+
+Son decisiones tomadas, no defectos pendientes:
+
+- **Los *preview deployments* de Vercel no autentican.** Cada PR recibe una URL distinta y no hay
+  lista blanca fija que la cubra. Aceptar un comodín sobre `*.vercel.app` significaría admitir
+  credenciales desde cualquier despliegue de cualquier cuenta de Vercel, así que se prefiere que un
+  preview sirva para revisar la interfaz pero no para probar con sesión.
+- **El proyecto gratuito de Supabase se pausa por inactividad.** Si el enlace lleva tiempo sin
+  visitas, conviene abrirlo antes de compartirlo. Despausar es un clic y, a diferencia del arranque
+  en frío del backend, no ocurre a mitad de una visita.
+- **`DB_SSL` cifra el transporte pero no verifica la cadena de certificación.** Hacerlo exigiría
+  distribuir y rotar el certificado raíz del proveedor.
+- **No hay endpoint de salud**, así que el healthcheck de la plataforma es TCP: detecta un proceso
+  caído, no uno vivo con la base de datos inaccesible.
+- **No hay despliegue automático desde el CI ni entorno de *staging*.** Cada plataforma despliega
+  desde su propia integración con GitHub.
+
+---
+
 ## Contrato de API
 
 El **contrato de API es la fuente de verdad única** que dirige el desarrollo de ambos paquetes.
