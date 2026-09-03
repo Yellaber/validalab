@@ -225,12 +225,23 @@ dos veces por Railway.
    Fija las variables de la tabla, con un `CORS_ORIGINS` provisional, y como comando de *pre-deploy*:
 
    ```bash
-   npm run migration:run:prod
+   sh -c 'DB_PORT=5432 npm run migration:run:prod'
    ```
 
    apuntando al **pooler en modo sesión** (puerto `5432`). Las migraciones son un paso de release
-   y no del arranque:
-   con varias réplicas, todas las intentarían a la vez.
+   y no del arranque: con varias réplicas, todas las intentarían a la vez.
+
+   > [!WARNING]
+   > **El `sh -c` no es adorno.** Railway ejecuta el comando de *pre-deploy* sin interpretarlo
+   > como shell, así que un prefijo de asignación (`DB_PORT=5432 npm ...`) se toma como el nombre
+   > del ejecutable y el paso falla al instante. El despliegue queda en `FAILED` con
+   > `failureStage: PRE_DEPLOY_COMMAND`, pero **la aplicación sigue respondiendo**, porque Railway
+   > no promueve un despliegue fallido y el anterior permanece en servicio. El fallo no se nota
+   > desde fuera: hay que mirar el estado del despliegue, no la salud de la aplicación.
+   >
+   > La salida del *pre-deploy* solo se ve en el panel: corre en un contenedor aparte y no aparece
+   > en los streams `build` ni `deploy` de la API. La configuración que devuelve la API tampoco
+   > sirve para verificarlo, porque muestra el comando **sin** el `sh -c`.
 3. **Frontend** — pon la URL pública del backend en `frontend/src/environments/environment.ts`
    (`baseUrl`) y haz commit.
 4. **Vercel** — importa el repositorio con **`frontend/` como directorio raíz**. `vercel.json` ya

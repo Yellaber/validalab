@@ -52,7 +52,7 @@
 - [x] 6.1e Fijar el RLS como migración de TypeORM, para que un entorno nuevo lo reproduzca sin pasos manuales
 - [x] 6.2 **Railway**: crear el servicio desde el `Dockerfile`, plan Hobby
 - [x] 6.3 Fijar en Railway las variables: `NODE_ENV=production`, `DB_*` (pooler) con `DB_SSL=true`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`, `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO`, `BOOTSTRAP_TOKEN` y un `CORS_ORIGINS` provisional
-- [ ] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando al **pooler en modo sesión** (puerto `5432`), no al de modo transacción
+- [x] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando al **pooler en modo sesión** (puerto `5432`), no al de modo transacción
 - [x] 6.5 Desplegar y verificar que arranca y que el esquema quedó aplicado
 - [ ] 6.6 **Vercel**: importar el repositorio con raíz en `frontend/` y desplegar; anotar la URL de producción
 - [ ] 6.7 Volver a Railway y fijar `CORS_ORIGINS` con la URL real de Vercel; redesplegar
