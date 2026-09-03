@@ -46,6 +46,15 @@ export class AppConfigService {
     };
   }
 
+  /**
+   * Si el arranque debe aplicar las migraciones pendientes. No forma parte de
+   * `database` a propósito: ese objeto describe la CONEXIÓN y lo comparte la CLI
+   * de migraciones, que nunca debe leer este flag.
+   */
+  get migrarAlArranque(): boolean {
+    return this.config.get('DB_MIGRAR_AL_ARRANCAR', { infer: true });
+  }
+
   /** Secreto y TTL para firmar y verificar el `accessToken`. */
   get jwt(): { accessSecret: string; accessTtl: string } {
     return {

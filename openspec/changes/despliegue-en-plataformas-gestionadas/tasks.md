@@ -28,7 +28,7 @@
 
 - [x] 4.1 `backend/Dockerfile` multi-etapa sobre Node 24 (la versión que fija el CI): etapa de build con `npm ci` completo, etapa final con `npm ci --omit=dev` y el `dist/` copiado
 - [x] 4.2 Ejecutar como usuario sin privilegios; no fijar `PORT` en la imagen (`AppConfigService` ya lo lee del entorno)
-- [x] 4.3 `CMD` que arranca la aplicación y **nada más**: sin migraciones en el arranque
+- [x] 4.3 `CMD` que arranca la aplicación y **nada más**: ningún comando extra en la imagen (la puesta al día del esquema la hace el arranque de la aplicación, ver bloque 10)
 - [x] 4.4 `backend/.dockerignore` que excluya `node_modules`, `dist`, `.env`, `test` y artefactos de cobertura
 - [x] 4.5 Construir y arrancar la imagen en local contra el PostgreSQL de `docker compose`, para validarla antes de tocar la plataforma
 - [x] 4.6 Comprobar en la imagen final que no están el compilador de TypeScript ni el resto del utillaje de desarrollo
@@ -52,10 +52,10 @@
 - [x] 6.1e Fijar el RLS como migración de TypeORM, para que un entorno nuevo lo reproduzca sin pasos manuales
 - [x] 6.2 **Railway**: crear el servicio desde el `Dockerfile`, plan Hobby
 - [x] 6.3 Fijar en Railway las variables: `NODE_ENV=production`, `DB_*` (pooler) con `DB_SSL=true`, `COOKIE_SECURE=true`, `COOKIE_SAMESITE=none`, `JWT_ACCESS_SECRET`, `BYOK_CLAVE_CIFRADO`, `BOOTSTRAP_TOKEN` y un `CORS_ORIGINS` provisional
-- [x] 6.4 Configurar el comando de *pre-deploy* con el script de migraciones del punto 3.1, apuntando al **pooler en modo sesión** (puerto `5432`), no al de modo transacción
+- [ ] 6.4 Dejar **vacío** el *Pre-Deploy Command* en Railway y fijar `DB_MIGRAR_AL_ARRANCAR=true`: el paso de pre-deploy falla siempre con esta imagen (ver bloque 10 y D6)
 - [x] 6.5 Desplegar y verificar que arranca y que el esquema quedó aplicado
-- [ ] 6.6 **Vercel**: importar el repositorio con raíz en `frontend/` y desplegar; anotar la URL de producción
-- [ ] 6.7 Volver a Railway y fijar `CORS_ORIGINS` con la URL real de Vercel; redesplegar
+- [x] 6.6 **Vercel**: importar el repositorio con raíz en `frontend/` y desplegar; anotar la URL de producción
+- [x] 6.7 Volver a Railway y fijar `CORS_ORIGINS` con la URL real de Vercel; redesplegar
 - [ ] 6.8 Inicializar el sistema con `POST /sistema/inicializar` y el `BOOTSTRAP_TOKEN` contra la URL pública
 - [ ] 6.9 Promover un segundo administrador con `PATCH /usuarios/{id}/rol`, como advierte el `README`: la inicialización no tiene reversa
 - [ ] 6.10 Retirar `BOOTSTRAP_TOKEN` del entorno de Railway una vez inicializado
@@ -86,3 +86,20 @@
 - [x] 9.3 Validar el contrato con el job de CI que ya lo comprueba, tras la corrección de 8.4
 - [x] 9.4 Revisar el diff completo: ninguna URL de despliegue debe traer credenciales, y `.env` no puede aparecer
 - [x] 9.5 `openspec validate --strict` sobre el change
+
+## 10. Migraciones al arranque, serializadas con un lock (revisión de D6)
+
+> El *Pre-Deploy Command* de Railway falla siempre con esta imagen —incluso con `node -e "console.log('ok')"`— y sin dejar salida. Se sustituye por una puesta al día en el arranque, coordinada entre réplicas.
+
+- [x] 10.1 `ejecutarMigracionesAlArranque` en `backend/src/database/migraciones-al-arranque.ts`: una transacción propia que toma `pg_advisory_xact_lock` y entrega ese `queryRunner` al `MigrationExecutor` con `transaction: 'none'`
+- [x] 10.2 Usar el lock de **transacción** y no el de sesión, porque la conexión pasa por el pooler en modo transacción y la sesión no es estable entre consultas
+- [x] 10.3 Relanzar el error tras el rollback, para que el proceso no llegue a escuchar con el esquema a medias; liberar el `queryRunner` siempre
+- [x] 10.4 `DB_MIGRAR_AL_ARRANCAR` en el esquema Zod, con `.default('false')` para no alterar el arranque de desarrollo
+- [x] 10.5 Exponerla en `AppConfigService` como getter propio, **fuera** del objeto `database` que comparte la CLI de migraciones
+- [x] 10.6 Invocarla en `main.ts` antes de `app.listen`, condicionada al flag
+- [x] 10.7 Pruebas unitarias: el lock se toma antes de aplicar nada, todo va en una única transacción, el ejecutor no abre transacciones propias, y un fallo hace rollback, propaga y libera
+- [x] 10.8 Pruebas del esquema de entorno para la variable nueva (valor por defecto y transformación)
+- [x] 10.9 Documentar la variable en `backend/.env.example` y en la tabla del `README`
+- [x] 10.10 Reescribir en el `README` la sección del pre-deploy: por qué no se usa y qué modo de fallo tiene
+- [x] 10.11 Actualizar la spec del change y D6 con la decisión revisada, y añadir los riesgos del DDL no transaccional y de la dependencia del arranque respecto a la base
+- [ ] 10.12 Verificar en el despliegue: activar la variable, comprobar en el registro de arranque que informa del estado del esquema, y que la aplicación queda en servicio

@@ -1,7 +1,9 @@
 import { NestFactory } from '@nestjs/core';
+import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
 import { configurarApp } from './configurar-app';
+import { ejecutarMigracionesAlArranque } from './database/migraciones-al-arranque';
 import { configurarSwagger } from './swagger/configurar-swagger';
 
 async function bootstrap() {
@@ -18,6 +20,13 @@ async function bootstrap() {
   // Documentación OpenAPI viva en `/docs` (la fuente de verdad del contrato
   // sigue siendo `contrato-api/openapi.yaml`).
   configurarSwagger(app);
+  // Las migraciones van ANTES de escuchar: si el esquema no se puede poner al
+  // día es preferible no arrancar, en vez de servir el código nuevo contra un
+  // esquema viejo. El advisory lock serializa las réplicas que arranquen a la
+  // vez (ver `ejecutarMigracionesAlArranque`).
+  if (config.migrarAlArranque) {
+    await ejecutarMigracionesAlArranque(app.get(DataSource));
+  }
   await app.listen(config.port);
 }
 void bootstrap();

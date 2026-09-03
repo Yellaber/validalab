@@ -70,7 +70,7 @@ Las rutas resultantes SHALL seguir casando con el `Path` de la cookie de sesión
 ### Requirement: El backend se distribuye como imagen de contenedor sin dependencias de desarrollo
 El backend SHALL disponer de una imagen de contenedor construida en varias etapas: una que compila con el árbol completo de dependencias y otra, final, que solo contiene el artefacto compilado y las dependencias de producción. El proceso SHALL ejecutarse con un usuario sin privilegios.
 
-La imagen SHALL tomar el puerto de escucha del entorno, sin fijarlo, porque la plataforma lo asigna. La imagen NO SHALL ejecutar migraciones al arrancar.
+La imagen SHALL tomar el puerto de escucha del entorno, sin fijarlo, porque la plataforma lo asigna. El `CMD` de la imagen SHALL limitarse a arrancar la aplicación: cualquier puesta al día del esquema es responsabilidad del arranque de la aplicación, no de un comando distinto en la imagen.
 
 #### Scenario: Arranque en la plataforma
 - **WHEN** la plataforma arranca el contenedor con su puerto en el entorno y la configuración completa
@@ -80,26 +80,40 @@ La imagen SHALL tomar el puerto de escucha del entorno, sin fijarlo, porque la p
 - **WHEN** se inspeccionan las dependencias instaladas en la imagen final
 - **THEN** contiene solo las de producción; el compilador de TypeScript y el resto del utillaje de desarrollo no están
 
-#### Scenario: El arranque no toca el esquema
-- **WHEN** arrancan varias réplicas del contenedor a la vez
-- **THEN** ninguna ejecuta migraciones ni altera el esquema
+#### Scenario: Arranque simultáneo de varias réplicas
+- **WHEN** arrancan varias réplicas del contenedor a la vez con la puesta al día del esquema activada
+- **THEN** el esquema se aplica una sola vez y ninguna réplica falla por la concurrencia
 
-### Requirement: Las migraciones se aplican como paso de release desde el artefacto compilado
-El sistema SHALL poder aplicar sus migraciones desde la imagen de producción, sin dependencias de desarrollo. El comando SHALL ejecutarse **una vez por release**, antes de poner en servicio la versión nueva, y no formar parte del arranque de cada réplica.
+### Requirement: Las migraciones se aplican al arrancar, serializadas entre réplicas
+El sistema SHALL poder aplicar sus migraciones pendientes durante el arranque, desde el artefacto compilado y sin dependencias de desarrollo. Ese comportamiento SHALL estar gobernado por una variable de entorno, desactivada por defecto, para que un arranque de desarrollo no altere el esquema sin pedirlo.
 
-El comando existente orientado a desarrollo —que trabaja sobre las fuentes TypeScript— SHALL conservarse: son dos entornos con dos artefactos distintos.
+La aplicación SHALL serializar esa puesta al día entre instancias mediante un cerrojo del propio PostgreSQL, de modo que varias réplicas que arranquen a la vez no compitan por aplicar las mismas migraciones. El cerrojo SHALL ser de ámbito de transacción, no de sesión, porque la conexión pasa por un pooler en modo transacción donde la sesión no es estable entre consultas.
 
-#### Scenario: Paso previo al despliegue
-- **WHEN** la plataforma ejecuta el comando de migraciones sobre la imagen de la versión nueva
-- **THEN** el esquema queda al día antes de que la versión nueva reciba tráfico
+Si la puesta al día falla, la aplicación NO SHALL aceptar tráfico: es preferible no arrancar a servir código nuevo contra un esquema que no le corresponde.
 
-#### Scenario: Migración fallida
-- **WHEN** una migración falla durante ese paso
-- **THEN** el release no continúa y la versión anterior sigue en servicio
+El comando de migraciones orientado a desarrollo —sobre las fuentes TypeScript— y el orientado al artefacto compilado SHALL conservarse ambos: siguen siendo la vía para aplicar un cambio de esquema a mano antes de desplegarlo.
 
-#### Scenario: Comando de desarrollo intacto
-- **WHEN** se ejecuta el comando de migraciones en desarrollo, sin haber compilado
-- **THEN** funciona sobre las fuentes TypeScript, como antes de esta capacidad
+#### Scenario: Esquema al día durante el arranque
+- **WHEN** la aplicación arranca con la puesta al día activada y hay migraciones pendientes
+- **THEN** las aplica antes de aceptar tráfico
+- **AND** deja constancia en el registro de cuáles aplicó
+
+#### Scenario: Arranque sin nada pendiente
+- **WHEN** la aplicación arranca con la puesta al día activada y el esquema ya está al día
+- **THEN** no altera el esquema y arranca con normalidad
+
+#### Scenario: Réplicas simultáneas
+- **WHEN** varias réplicas arrancan a la vez con migraciones pendientes
+- **THEN** una sola las aplica y las demás esperan a que termine
+- **AND** al continuar no encuentran nada pendiente y arrancan sin error
+
+#### Scenario: Migración fallida durante el arranque
+- **WHEN** una migración falla mientras se aplica
+- **THEN** la transacción se deshace y la aplicación no llega a escuchar
+
+#### Scenario: Arranque de desarrollo
+- **WHEN** la aplicación arranca sin la variable activada
+- **THEN** no toca el esquema, y las migraciones se siguen aplicando con los comandos existentes
 
 ### Requirement: El frontend se sirve como aplicación de página única
 El despliegue del frontend SHALL declarar explícitamente el directorio de salida de la build y las reescrituras que una aplicación de página única necesita. Sin ellas, una ruta de cliente pedida directamente al servidor no corresponde a ningún archivo.

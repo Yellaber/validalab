@@ -77,15 +77,23 @@ La opción se cablea en `buildDataSourceOptions`, que es el único constructor d
 
 Un detalle verificado que conviene no volver a equivocar: **`node-postgres` no usa prepared statements con nombre por defecto**, así que el pooler de Supabase en modo transacción funciona sin configuración especial. Aun así, las migraciones no se ejecutan contra el pooler en **modo transacción**, sino contra el mismo pooler en **modo sesión** (puerto `5432`): son DDL en una transacción larga, el caso para el que el modo transacción no está pensado. Se descartó la conexión **directa**, que era la opción inicial, al comprobar que `db.<ref>.supabase.co` resuelve solo a IPv6 en el plan gratuito: haría depender el paso de release de que la red de salida de Railway hable IPv6. El pooler expone IPv4 y sirve para ambos modos.
 
-### D6 — Las migraciones son un paso de release, y se ejecutan desde el compilado
+### D6 — Las migraciones se aplican al arrancar, coordinadas con un advisory lock
 
-Dos partes, y la segunda es la que tiene sustancia.
+**Esta decisión se revisó durante la implementación.** El planteamiento original era el correcto sobre el papel y falló contra la realidad de la plataforma; queda documentado el camino porque el motivo importa.
 
-**Que sea un paso de release** y no parte del arranque del contenedor es la parte obvia: `migrationsRun` ya es `false` en `buildDataSourceOptions`, y ejecutarlas al arrancar significaría que cada réplica las intenta a la vez. En Railway es el comando de *pre-deploy*.
+**Lo que se decidió primero:** las migraciones como *paso de release* —el *Pre-Deploy Command* de Railway—, nunca en el arranque, porque con varias réplicas todas las intentarían a la vez. `migrationsRun` es `false` en `buildDataSourceOptions` precisamente por eso.
 
-**Que se puedan ejecutar desde la imagen final** es lo que hay que resolver. El script `migration:run` actual invoca `typeorm-ts-node-commonjs` sobre `src/database/data-source.ts`, y ni `ts-node` ni `typescript` están en la imagen de producción. Se añade un script paralelo que ataca el artefacto compilado con el binario de `typeorm` —dependencia de producción, presente en la imagen— sobre `dist/database/data-source.js`.
+**Por qué no funciona:** el pre-deploy de Railway falla **siempre** con esta imagen, incluso con un comando que no toca nada (`node -e "console.log('ok')"`), y sin dejar salida en el panel: el contenedor del paso no llega a arrancar. La causa no es diagnosticable desde fuera —esa salida no existe en la API, ni el agente de Railway la alcanza— y el modo de fallo es especialmente traicionero: el despliegue queda en `FAILED` mientras **la aplicación anterior sigue en servicio**, así que desde fuera todo parece sano; y los *redeploys* se saltan el paso y salen en verde, de modo que el fallo aparece y desaparece según cómo se lance el despliegue.
 
-Se añade en vez de sustituir: el script actual es el que se usa en desarrollo, donde apuntar al `dist/` obligaría a compilar antes de cada migración. Son dos entornos con dos artefactos, y cada uno tiene el suyo.
+**Lo que se hace en su lugar:** aplicar las migraciones pendientes durante el arranque, bajo `DB_MIGRAR_AL_ARRANCAR` (desactivada por defecto, para que un arranque de desarrollo no altere el esquema sin pedirlo).
+
+El motivo por el que se habían sacado del arranque —la carrera entre réplicas— se resuelve con un **`pg_advisory_xact_lock`**: la primera réplica lo toma y aplica; las demás se **bloquean** en él —no fallan— y cuando entran ya no queda nada pendiente, así que salen sin tocar el esquema.
+
+Tiene que ser el lock **de transacción** y no el de sesión (`pg_advisory_lock`): la aplicación habla con PostgreSQL a través del pooler en **modo transacción**, donde la sesión no es estable entre consultas y un lock de sesión no se sostendría. De ahí que todo ocurra en una transacción propia, en la que se toma el lock y a la que se le entrega el `MigrationExecutor` con `transaction: 'none'` para que no abra transacciones por su cuenta.
+
+Eso cambia además por dónde pasan las migraciones: antes iban por el pooler en **modo sesión** (`5432`), ahora por el de **modo transacción** (`6543`), que es la conexión de la aplicación. Es correcto porque una transacción viaja entera por la misma conexión del pooler; el precio es que **una migración con DDL no transaccional** (`CREATE INDEX CONCURRENTLY`) no puede aplicarse por esta vía, y habría que ejecutarla a mano.
+
+**Que se puedan ejecutar desde la imagen final** sigue valiendo, y ahora sirve para el camino manual: el script `migration:run` invoca `typeorm-ts-node-commonjs` sobre `src/database/data-source.ts`, y ni `ts-node` ni `typescript` están en la imagen de producción. El script paralelo ataca el artefacto compilado con el binario de `typeorm` —dependencia de producción— sobre `dist/database/data-source.js`. Se conservan los dos: son dos entornos con dos artefactos.
 
 ### D7 — El origen del backend se fija en `environment.ts`, no se inyecta en build
 
@@ -131,13 +139,15 @@ La spec del backend se corrige **en su sitio**, no vía delta. Este es un change
 - **R4 · Los previews de Vercel no autentican** (D8) → un PR con cambios de frontend se puede revisar visualmente pero no probar con sesión. El precio se paga en revisión, no en producción.
 - **R5 · Sin endpoint de salud, el healthcheck de plataforma es TCP** → Railway detecta un proceso caído, no uno vivo con la base de datos inaccesible. Añadir el endpoint es un change propio; meterlo aquí mezclaría observabilidad con despliegue.
 - **R6 · La URL del backend queda escrita en el repositorio** (D7) → si Railway cambia el dominio del servicio, hay que tocar `environment.ts` y volver a desplegar el frontend. Es una edición de una línea y la URL de un servicio no cambia sola.
-- **R7 · El paso de migraciones bloquea el release si falla** → es lo que se quiere. Una migración fallida que dejara arrancar la aplicación pondría el código nuevo contra un esquema viejo.
+- **R7 · Una migración fallida impide arrancar** → es lo que se quiere. Una migración fallida que dejara arrancar la aplicación pondría el código nuevo contra un esquema viejo. El precio es que un error de migración deja el servicio sin instancias nuevas; la anterior sigue en servicio mientras la plataforma no promueva el despliegue fallido.
+- **R8 · Las migraciones pasan por el pooler en modo transacción** (D6) → van en una única transacción, que es lo que ese modo atiende bien, pero **descarta el DDL no transaccional** (`CREATE INDEX CONCURRENTLY`). Una migración así habría que aplicarla a mano con `migration:run:prod` por el puerto de modo sesión, que se conserva por eso.
+- **R9 · El arranque depende de la base de datos** (D6) → con la puesta al día activada, una base inaccesible impide arrancar en vez de arrancar y fallar al primer uso. Es preferible: el fallo aparece en el despliegue y no en la primera petición del usuario.
 
 ## Migration Plan
 
 No hay migración de datos ni cambio de esquema: el change no toca entidades.
 
-Para quien ya tenga el repositorio clonado, las dos variables nuevas (`COOKIE_SAMESITE`, `DB_SSL`) tienen **valores por defecto iguales al comportamiento actual** (`strict` y `false`), así que un `.env` existente sigue arrancando sin tocarlo. `.env.example` las documenta para quien parta de la plantilla.
+Para quien ya tenga el repositorio clonado, las tres variables nuevas (`COOKIE_SAMESITE`, `DB_SSL`, `DB_MIGRAR_AL_ARRANCAR`) tienen **valores por defecto iguales al comportamiento actual** (`strict`, `false` y `false`), así que un `.env` existente sigue arrancando sin tocarlo y sin que el arranque toque el esquema. `.env.example` las documenta para quien parta de la plantilla.
 
 El despliegue en sí es la primera puesta en marcha del sistema: no hay nada que migrar desde un despliegue anterior, porque no lo hay.
 

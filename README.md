@@ -174,6 +174,7 @@ el proceso. Estas son las que cambian respecto al desarrollo local; el resto se 
 | `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_DATABASE` | cadena del **pooler** de Supabase | La app usa el pooler en modo transacción; las migraciones, el de modo sesión (ver abajo). |
 | `DB_SSL`                              | `true`                        | Supabase lo exige; sin él el backend no arranca.                         |
 | `DB_SYNCHRONIZE`                      | `false`                       | El esquema lo gobiernan las migraciones.                                 |
+| `DB_MIGRAR_AL_ARRANCAR`               | `true`                        | Aplica las migraciones al arrancar, serializando las réplicas con un lock. |
 | `COOKIE_SECURE`                       | `true`                        | Obligatorio con `SameSite=None`.                                         |
 | `COOKIE_SAMESITE`                     | `none`                        | Frontend y backend están en sitios registrables distintos.               |
 | `CORS_ORIGINS`                        | URL de producción de Vercel   | Con credenciales el origen no puede ser `*`.                             |
@@ -194,14 +195,18 @@ El orden importa y no es deducible: **el frontend necesita la URL del backend pa
 backend necesita la URL del frontend para su CORS**. Como no se pueden satisfacer a la vez, se pasa
 dos veces por Railway.
 
-1. **Supabase** — crea el proyecto. Anota las **dos** cadenas de conexión del *pooler*, que se
-   diferencian solo en el puerto: la de **modo transacción** (`6543`, para la aplicación) y la de
-   **modo sesión** (`5432`, para las migraciones: son DDL en una transacción larga, que no es para
-   lo que está pensado el modo transacción).
+1. **Supabase** — crea el proyecto y anota la cadena de conexión del *pooler* en **modo
+   transacción** (`6543`). Es la que usa el backend, y desde que las migraciones se aplican al
+   arrancar es también por donde pasan: van dentro de una única transacción, que el modo transacción
+   sí atiende sin problema porque una transacción viaja entera por la misma conexión.
 
-   No uses la conexión **directa** (`db.<ref>.supabase.co`) para las migraciones aunque el panel la
-   ofrezca: en el plan gratuito resuelve **solo a IPv6**, y si la red de salida de la plataforma que
-   ejecuta el paso de release no habla IPv6, el despliegue falla al conectar. El pooler tiene IPv4.
+   Guarda también la de **modo sesión** (`5432`): es la que necesitas para aplicar migraciones **a
+   mano** desde tu máquina con `npm run migration:run:prod`, que sigue siendo la vía para un cambio
+   de esquema que prefieras ejecutar y verificar antes de desplegar.
+
+   No uses la conexión **directa** (`db.<ref>.supabase.co`) aunque el panel la ofrezca: en el plan
+   gratuito resuelve **solo a IPv6**, y si la red de salida de la plataforma no habla IPv6, la
+   conexión falla. El pooler tiene IPv4.
 2. **Railway** — crea el servicio desde el repositorio y configúralo **en el panel**, porque el
    archivo `railway.json` está deprecado (lo sustituye `.railway/railway.ts`, que este proyecto no
    usa):
@@ -211,7 +216,6 @@ dos veces por Railway.
    | *Settings → Source → Branch* | la rama que contiene los artefactos de despliegue |
    | *Settings → Source → Root Directory* | `backend` |
    | *Settings → Build → Builder* | `Dockerfile` |
-   | *Settings → Deploy → Pre-deploy Command* | ver abajo |
 
    > [!WARNING]
    > **La rama es el ajuste que más caro sale equivocar.** Railway se engancha por defecto a la rama
@@ -222,26 +226,28 @@ dos veces por Railway.
    > de arranque: la imagen de este `Dockerfile` corre como `[Nest] 1` —Node es el PID 1— mientras
    > que el detector automático deja `npm → nest → node` y un PID mayor.
 
-   Fija las variables de la tabla, con un `CORS_ORIGINS` provisional, y como comando de *pre-deploy*:
+   Fija las variables de la tabla, con un `CORS_ORIGINS` provisional. **No configures un
+   comando de *pre-deploy*:** las migraciones se aplican al arrancar, con
+   `DB_MIGRAR_AL_ARRANCAR=true`.
 
-   ```bash
-   sh -c 'DB_PORT=5432 npm run migration:run:prod'
-   ```
-
-   apuntando al **pooler en modo sesión** (puerto `5432`). Las migraciones son un paso de release
-   y no del arranque: con varias réplicas, todas las intentarían a la vez.
-
-   > [!WARNING]
-   > **El `sh -c` no es adorno.** Railway ejecuta el comando de *pre-deploy* sin interpretarlo
-   > como shell, así que un prefijo de asignación (`DB_PORT=5432 npm ...`) se toma como el nombre
-   > del ejecutable y el paso falla al instante. El despliegue queda en `FAILED` con
-   > `failureStage: PRE_DEPLOY_COMMAND`, pero **la aplicación sigue respondiendo**, porque Railway
-   > no promueve un despliegue fallido y el anterior permanece en servicio. El fallo no se nota
-   > desde fuera: hay que mirar el estado del despliegue, no la salud de la aplicación.
+   > [!NOTE]
+   > **Por qué al arrancar y no como paso de release.** Lo natural sería el *Pre-Deploy Command* de
+   > Railway, y así se planteó primero. No funciona con esta imagen: el paso falla siempre, incluso
+   > con un comando tan inocuo como `node -e "console.log('ok')"`, sin dejar ninguna salida en el
+   > panel. El contenedor del pre-deploy no llega a arrancar y la causa no es diagnosticable desde
+   > fuera.
    >
-   > La salida del *pre-deploy* solo se ve en el panel: corre en un contenedor aparte y no aparece
-   > en los streams `build` ni `deploy` de la API. La configuración que devuelve la API tampoco
-   > sirve para verificarlo, porque muestra el comando **sin** el `sh -c`.
+   > Y falla de la peor manera posible: **el despliegue queda en `FAILED` mientras la aplicación
+   > sigue respondiendo**, porque Railway no promueve un despliegue fallido y el anterior se queda en
+   > servicio. Además los *redeploys* se saltan ese paso y salen en verde, así que el problema
+   > aparece y desaparece según cómo hayas lanzado el despliegue. Si algún día vuelves a esa vía:
+   > mira el **estado del despliegue**, nunca la salud de la aplicación.
+   >
+   > El motivo original para sacar las migraciones del arranque —que con varias réplicas todas las
+   > intentarían a la vez— se resuelve con un `pg_advisory_xact_lock`: la primera réplica aplica y
+   > las demás esperan y siguen de largo al no quedar nada pendiente. Si una migración falla, el
+   > proceso no llega a escuchar.
+
 3. **Frontend** — pon la URL pública del backend en `frontend/src/environments/environment.ts`
    (`baseUrl`) y haz commit.
 4. **Vercel** — importa el repositorio con **`frontend/` como directorio raíz**. `vercel.json` ya

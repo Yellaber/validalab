@@ -99,6 +99,21 @@ describe('validateEnv', () => {
     });
   });
 
+  describe('DB_MIGRAR_AL_ARRANCAR', () => {
+    // Un arranque que altere el esquema sin pedirlo sorprendería en desarrollo:
+    // el valor por defecto es el que no toca nada.
+    it('queda desactivado por defecto', () => {
+      expect(validateEnv(entornoValido).DB_MIGRAR_AL_ARRANCAR).toBe(false);
+    });
+
+    it('transforma "true" a booleano', () => {
+      expect(
+        validateEnv({ ...entornoValido, DB_MIGRAR_AL_ARRANCAR: 'true' })
+          .DB_MIGRAR_AL_ARRANCAR,
+      ).toBe(true);
+    });
+  });
+
   describe('COOKIE_SAMESITE', () => {
     it('vale strict por defecto', () => {
       expect(validateEnv(entornoValido).COOKIE_SAMESITE).toBe('strict');

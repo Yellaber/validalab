@@ -38,6 +38,16 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // Aplicar las migraciones pendientes al arrancar. Desactivada por defecto: en
+  // desarrollo las migraciones se lanzan a mano con `npm run migration:run`, y un
+  // arranque que altere el esquema sin pedirlo sorprendería. Se activa en el
+  // despliegue, donde es la única vía por la que el esquema se pone al día; las
+  // réplicas se serializan con un advisory lock, así que activarla con varias
+  // instancias es seguro.
+  DB_MIGRAR_AL_ARRANCAR: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   // --- JWT (firma y verificación del accessToken) ---
   JWT_ACCESS_SECRET: z.string().min(1),
